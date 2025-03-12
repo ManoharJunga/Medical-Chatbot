@@ -1,4 +1,4 @@
-const Doctor = require("../models/Doctor");
+const Doctor = require("../models/Doctor.model");
 const { getSuggestedSpecialty } = require("../services/geminiService");
 const { getGoogleDoctors } = require("../services/googlePlacesService");
 
