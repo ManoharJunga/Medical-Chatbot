@@ -16,24 +16,24 @@ export default function VerifyOtp() {
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleVerifyOtp = async (e) => {
+  const handleVerifyOtp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-
+  
     try {
       const response = await fetch("http://localhost:5001/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp }),
       });
-
+  
       const data = await response.json();
-
+  
       if (!response.ok) {
         toast.error(data.error || "Invalid OTP");
         return;
       }
-
+  
       toast.success("OTP verified successfully!");
       router.push("/dashboard"); // Redirect after successful verification
     } catch (error) {
@@ -42,6 +42,7 @@ export default function VerifyOtp() {
       setIsLoading(false);
     }
   };
+  
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
