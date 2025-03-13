@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-
 import Link from "next/link"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,33 +11,59 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 
+const API_URL = "http://localhost:5001/api/auth/login" // Ensure your backend is running here
+
 export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("") // Clear previous errors
 
-    // Simulate login process
-    setTimeout(() => {
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed")
+      }
+
+      if (data.token) {
+        localStorage.setItem("token", data.token)
+        router.push("/dashboard")
+      } else {
+        throw new Error("Invalid response from server")
+      }
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
       setIsLoading(false)
-      // In a real app, you would handle authentication here
-      window.location.href = "/dashboard"
-    }, 1500)
+    }
   }
 
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
       <main className="flex-1 flex items-center justify-center py-12 px-4 bg-gray-50">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md shadow-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold">Log in</CardTitle>
             <CardDescription>Enter your email and password to access your account</CardDescription>
           </CardHeader>
           <CardContent>
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -60,6 +86,7 @@ export default function Login() {
                 <Input
                   id="password"
                   type="password"
+                  placeholder="********"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -87,15 +114,9 @@ export default function Login() {
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <Button variant="outline" className="w-full">
-                Google
-              </Button>
-              <Button variant="outline" className="w-full">
-                Facebook
-              </Button>
-              <Button variant="outline" className="w-full">
-                Apple
-              </Button>
+              <Button variant="outline" className="w-full">Google</Button>
+              <Button variant="outline" className="w-full">Facebook</Button>
+              <Button variant="outline" className="w-full">Apple</Button>
             </div>
           </CardContent>
         </Card>
@@ -104,4 +125,3 @@ export default function Login() {
     </div>
   )
 }
-

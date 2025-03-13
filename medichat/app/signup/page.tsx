@@ -1,17 +1,16 @@
 "use client"
 
-import type React from "react"
-import { useRouter } from "next/navigation"; 
-import Link from "next/link"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
-import { toast } from "@/components/ui/use-toast"; 
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Navbar } from "@/components/navbar";
+import { Footer } from "@/components/footer";
+import { toast } from "react-toastify"; // ✅ Correct way to use toast in Next.js
 
 export default function Signup() {
   const router = useRouter();
@@ -27,47 +26,50 @@ export default function Signup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     if (password !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match!",
-        variant: "destructive", // 'destructive' is correct for errors
-      });
+      toast.error("Passwords do not match!");
       return;
     }
-  
+
     setIsLoading(true);
-  
+
     try {
+      // Step 1: Send registration request
       const response = await fetch("http://localhost:5001/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, phone, dob, gender, password }),
       });
-  
+
       const data = await response.json();
-  
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Account created successfully! Please verify your email.",
-        });
-  
-        router.push("/login");
-      } else {
-        toast({
-          title: "Error",
-          description: data.message || "Registration failed",
-          variant: "destructive",
-        });
+
+      if (!response.ok) {
+        toast.error(data.message || "Registration failed");
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
+
+      // Step 2: Send OTP after successful registration
+      const otpResponse = await fetch("http://localhost:5001/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
+
+      const otpData = await otpResponse.json();
+
+      if (!otpResponse.ok) {
+        toast.error(otpData.error || "Failed to send OTP");
+        return;
+      }
+
+      toast.success("Account created! OTP sent to your email.");
+
+      // Redirect to OTP verification page
+      router.push(`/otp?email=${email}`);
+
+    } catch (error) {
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
