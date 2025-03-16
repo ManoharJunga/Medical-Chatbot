@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { MessageSquare, PlusCircle, Send, AlertCircle } from "lucide-react";
+import { Trash, MessageSquare, PlusCircle, Send, AlertCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Navbar } from "@/components/navbar";
@@ -21,10 +21,11 @@ interface ChatMessage {
 interface ChatWindow {
   id: string;
   name: string;
+  windowId: string;
 }
 
 export default function ChatPage() {
-  const [user, setUser] = useState<{ userId: string } | null>(null);
+  const [user, setUser] = useState<{ id: string } | null>(null);
   const [windows, setWindows] = useState<ChatWindow[]>([]);
   const [activeWindow, setActiveWindow] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -119,6 +120,15 @@ export default function ChatPage() {
     }
   };
 
+  const deleteChatWindow = async (windowId: string) => {
+    try {
+      await axios.delete(`http://localhost:5001/api/chat-windows/window/${windowId}`);
+      setWindows((prev) => prev.filter((win) => win.windowId !== windowId)); // Remove deleted window from state
+    } catch (error) {
+      console.error("Error deleting chat window:", error);
+    }
+  };
+
   const handleWindowSwitch = (windowId: string) => {
     setActiveWindow(windowId);
     localStorage.setItem("activeWindow", windowId); // Store window ID locally
@@ -133,20 +143,22 @@ export default function ChatPage() {
   const handleManualSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input.trim()) return;
-  
-    const userId = user?.id || user?._id;
+
+    const userId = user?.id;
     const windowId = localStorage.getItem("activeWindow") || window.location.pathname;
-  
+
     if (!userId) {
       setMessages((prev) => [...prev, { role: "bot", content: "Error: User not found. Please log in again." }]);
       return;
     }
-  
-    const userMessage = { role: "user", content: input };
+
+    const userMessage = { role: "user" as const, content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
-  
+
+    console.log("User input:", input); // ✅ Log user input
+
     try {
       // Send user input to AI chat API
       const chatResponse = await fetch("http://localhost:5001/api/chat/message", {
@@ -154,46 +166,72 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, windowId, message: input }),
       });
-  
+
       const chatData = await chatResponse.json();
+      console.log("Chat API Response:", chatData); // ✅ Log API response
+
       if (!chatResponse.ok) throw new Error(chatData.error || "Failed to get a response");
-  
+
       const botMessage = chatData.message || "I'm sorry, I didn't understand that.";
-  
+
       setMessages((prev) => [...prev, { role: "bot", content: botMessage }]);
-  
+
       // Extract symptoms from bot response
       const extractedSymptoms = extractSymptoms(botMessage);
-      
+      console.log("Extracted Symptoms:", extractedSymptoms); // ✅ Log extracted symptoms
+
       if (extractedSymptoms.length > 0) {
+        console.log("Fetching doctors for symptoms:", extractedSymptoms); // ✅ Log doctor search request
+
         // Fetch doctor recommendations
         const doctorResponse = await fetch("http://localhost:5001/api/doctors/find", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ symptoms: extractedSymptoms }),
         });
-  
+
         const doctorData = await doctorResponse.json();
+        console.log("Doctor API Response:", doctorData); // ✅ Log doctor response
+
         if (!doctorResponse.ok) throw new Error(doctorData.error || "Failed to fetch doctors");
-  
+
         // Display bot message + doctor recommendations
         setMessages((prev) => [
           ...prev,
           { role: "bot", content: `Based on your symptoms, here are some recommended doctors:`, doctors: doctorData }
         ]);
       }
-  
+
     } catch (error) {
+      console.error("Error:", error); // ✅ Log errors
       setMessages((prev) => [...prev, { role: "bot", content: "Sorry, something went wrong. Please try again." }]);
     } finally {
       setIsLoading(false);
     }
   };
-  
+
+
   const extractSymptoms = (message: string) => {
-    const symptomList = ["migraine", "seizures", "dizziness", "fever", "cough", "pain", "fatigue", "anxiety"];
+    const symptomList = [
+      "migraine", "seizures", "dizziness", "fever", "cough", "pain", "fatigue", "anxiety",
+      "headache", "nausea", "vomiting", "shortness of breath", "chest pain", "sore throat",
+      "runny nose", "stuffy nose", "sneezing", "muscle pain", "joint pain", "back pain",
+      "abdominal pain", "diarrhea", "constipation", "bloating", "indigestion", "loss of appetite",
+      "weight loss", "weight gain", "insomnia", "night sweats", "chills", "skin rash",
+      "itching", "swelling", "redness", "burning sensation", "blurred vision", "double vision",
+      "sensitivity to light", "ringing in ears", "hearing loss", "difficulty swallowing",
+      "hoarseness", "palpitations", "high blood pressure", "low blood pressure", "weakness",
+      "numbness", "tingling", "loss of balance", "confusion", "memory loss", "depression",
+      "irritability", "mood swings", "hallucinations", "tremors", "cold hands and feet",
+      "excessive thirst", "frequent urination", "dry mouth", "chest tightness", "breathlessness",
+      "bruising easily", "excessive sweating", "hair loss", "hot flashes", "yellowing of skin",
+      "blood in stool", "blood in urine", "fainting", "severe cramps", "difficulty concentrating",
+      "acid reflux", "heartburn", "restlessness", "kidney pain"
+    ];
+
     return symptomList.filter(symptom => message.toLowerCase().includes(symptom));
   };
+
 
 
 
@@ -223,14 +261,25 @@ export default function ChatPage() {
                 {windows.map((window) => (
                   <div
                     key={window.windowId}
-                    className={`w-[340px] flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-all duration-200 ${activeWindow === window.windowId
-                      ? "bg-blue-100 border border-blue-300"
-                      : "hover:bg-gray-100"
+                    className={`w-[340px] flex items-center justify-between px-3 py-2 rounded-md cursor-pointer transition-all duration-200 ${activeWindow === window.windowId ? "bg-blue-100 border border-blue-300" : "hover:bg-gray-100"
                       }`}
                     onClick={() => handleWindowSwitch(window.windowId)}
                   >
-                    <MessageSquare size={16} className="text-gray-600" />
-                    <span className="truncate text-sm font-medium">{window.name || `Chat ${window.windowId}`}</span>
+                    <div className="flex items-center gap-2">
+                      <MessageSquare size={16} className="text-gray-600" />
+                      <span className="truncate text-sm font-medium">{window.name || "New Chat"}</span> 
+                      </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hover:bg-red-100"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent chat window from switching when deleting
+                        deleteChatWindow(window.windowId);
+                      }}
+                    >
+                      <Trash size={16} className="text-red-500" />
+                    </Button>
                   </div>
                 ))}
               </div>
