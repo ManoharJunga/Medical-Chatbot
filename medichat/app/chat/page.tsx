@@ -1,151 +1,247 @@
-"use client"
+"use client";
 
-import type React from "react"
+import { useState, useEffect, useRef } from "react";
+import axios from "axios";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { MessageSquare, PlusCircle, Send, AlertCircle } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Navbar } from "@/components/navbar";
 
-import { useChat } from "@ai-sdk/react"
-import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
-import { Send, Mic, PlusCircle, AlertCircle } from "lucide-react"
-
-export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat()
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [showDisclaimer, setShowDisclaimer] = useState(true)
-
-  // Suggested quick actions
-  const quickActions = [
-    { label: "Check Symptoms", prompt: "I want to check my symptoms" },
-    { label: "Get Diet Advice", prompt: "Can you give me diet advice for better health?" },
-    { label: "Find a Doctor", prompt: "How do I find a specialist doctor?" },
-    { label: "Mental Health", prompt: "I'm feeling anxious, what can I do?" },
-  ]
-
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
-  // Handle quick action click
-  const handleQuickAction = (prompt: string) => {
-    const fakeEvent = {
-      preventDefault: () => {},
-    } as React.FormEvent<HTMLFormElement>
-
-    // Set the input value and submit the form
-    handleInputChange({ target: { value: prompt } } as React.ChangeEvent<HTMLInputElement>)
-    setTimeout(() => handleSubmit(fakeEvent), 100)
-  }
-
-  return (
-    <div className="flex min-h-screen flex-col">
-      <Navbar />
-      <main className="flex-1 py-6 px-4 bg-gray-50">
-        <div className="container mx-auto max-w-4xl">
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="border-b">
-              <CardTitle className="text-xl">AI Medical Chatbot</CardTitle>
-            </CardHeader>
-
-            <CardContent className="p-0">
-              {/* Medical Disclaimer */}
-              {showDisclaimer && (
-                <div className="bg-amber-50 p-4 flex items-start space-x-3">
-                  <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-sm text-amber-800">
-                      <strong>Medical Disclaimer:</strong> This AI chatbot provides general information only and is not
-                      a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of
-                      your physician or other qualified health provider with any questions you may have regarding a
-                      medical condition.
-                    </p>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="p-0 h-auto text-amber-800"
-                      onClick={() => setShowDisclaimer(false)}
-                    >
-                      Dismiss
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Chat Messages */}
-              <div className="p-4 h-[50vh] overflow-y-auto">
-                {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center">
-                    <div className="rounded-full bg-primary/10 p-4 mb-4">
-                      <PlusCircle className="h-8 w-8 text-primary" />
-                    </div>
-                    <h3 className="text-xl font-medium mb-2">Start a new conversation</h3>
-                    <p className="text-gray-500 mb-6 max-w-md">
-                      Describe your symptoms or ask health-related questions to get started
-                    </p>
-
-                    {/* Quick Actions */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md">
-                      {quickActions.map((action, index) => (
-                        <Button
-                          key={index}
-                          variant="outline"
-                          className="justify-start"
-                          onClick={() => handleQuickAction(action.prompt)}
-                        >
-                          {action.label}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {messages.map((message, index) => (
-                      <div
-                        key={index}
-                        className={`mb-4 flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                      >
-                        <div
-                          className={`max-w-[80%] rounded-lg p-3 ${
-                            message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
-                          }`}
-                        >
-                          {message.content}
-                        </div>
-                      </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                  </>
-                )}
-              </div>
-            </CardContent>
-
-            <CardFooter className="border-t p-4">
-              <form onSubmit={handleSubmit} className="flex w-full space-x-2">
-                <Input
-                  value={input}
-                  onChange={handleInputChange}
-                  placeholder="Type your message..."
-                  className="flex-grow"
-                  disabled={isLoading}
-                />
-                <Button type="button" variant="outline" size="icon" disabled={isLoading}>
-                  <Mic className="h-4 w-4" />
-                  <span className="sr-only">Voice input</span>
-                </Button>
-                <Button type="submit" size="icon" disabled={isLoading}>
-                  <Send className="h-4 w-4" />
-                  <span className="sr-only">Send message</span>
-                </Button>
-              </form>
-            </CardFooter>
-          </Card>
-        </div>
-      </main>
-      <Footer />
-    </div>
-  )
+interface ChatMessage {
+  role: "user" | "bot";
+  content: string;
 }
 
+interface ChatWindow {
+  id: string;
+  name: string;
+}
+
+export default function ChatPage() {
+  const [user, setUser] = useState<{ userId: string } | null>(null);
+  const [windows, setWindows] = useState<ChatWindow[]>([]);
+  const [activeWindow, setActiveWindow] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        localStorage.removeItem("user");
+        setUser(null);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchChatWindows(user.id);
+    }
+  }, [user?.id]);
+
+
+  useEffect(() => {
+    if (activeWindow) fetchChatHistory(activeWindow);
+
+  }, [activeWindow]);  
+
+  
+  const fetchChatHistory = async (windowId: string) => {
+    try {
+      console.log("Fetching chat history for windowId:", windowId);
+      
+      // Clear previous messages before fetching new ones
+      setMessages([]);
+  
+      const response = await axios.get(`http://localhost:5001/api/chat/history/${windowId}`);
+  
+      if (Array.isArray(response.data)) {
+        const formattedMessages = response.data.flatMap((message) => [
+          { role: "user", content: message.userMessage },
+          { role: "bot", content: message.botResponse }
+        ]);
+  
+        setMessages(formattedMessages);
+      }
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+    }
+  };
+  
+
+  const fetchChatWindows = async (userId) => {
+    try {
+      const response = await axios.get(`http://localhost:5001/api/chat-windows/user/${userId}/windows`);
+      setWindows(response.data); // Store chat windows in state
+    } catch (error) {
+      console.error("Error fetching chat windows:", error);
+    }
+  };
+
+
+  const createNewWindow = async () => {
+    if (!user || !user.id) {
+      console.error("User ID is missing!");
+      return;
+    }
+  
+    try {
+      const response = await axios.post("http://localhost:5001/api/chat-windows/new", { userId: user.id });
+  
+      const newWindow = response.data; 
+      setWindows([...windows, { id: newWindow.windowId, name: `Chat ${windows.length + 1}` }]);
+      setActiveWindow(newWindow.windowId);
+    } catch (error) {
+      console.error("Error creating chat window:", error);
+    }
+  };
+  
+  const handleWindowSwitch = (windowId: string) => {
+    setActiveWindow(windowId);
+    localStorage.setItem("activeWindow", windowId); // Store window ID locally
+    fetchChatHistory(windowId);
+    console.log("new added console",windowId)
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+  };
+
+  const handleManualSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    const userId = user?.id || user?._id;
+    const windowId = localStorage.getItem("activeWindow") || window.location.pathname; // Retrieve saved window ID
+
+    console.log("Submitting message...");
+    console.log("User ID:", userId);
+    console.log("Window ID:", windowId);
+    console.log("Input message:", input);
+
+    if (!userId) {
+        console.error("User ID is missing");
+        setMessages((prev) => [
+            ...prev,
+            { role: "bot", content: "Error: User not found. Please log in again." },
+        ]);
+        return;
+    }
+
+    const userMessage = { role: "user", content: input };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+        console.log("Sending request to API...");
+        const response = await fetch("http://localhost:5001/api/chat/message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, windowId, message: input }), // Sending windowId
+        });
+
+        console.log("Response status:", response.status);
+
+        const data = await response.json();
+        console.log("Response data:", data);
+
+        if (!response.ok) throw new Error(data.error || "Failed to get a response");
+
+        setMessages((prev) => [
+            ...prev,
+            { role: "bot", content: data.message || "I'm sorry, I didn't understand that." },
+        ]);
+
+    } catch (error) {
+        console.error("Error fetching bot response:", error);
+        setMessages((prev) => [
+            ...prev,
+            { role: "bot", content: "Sorry, something went wrong. Please try again." },
+        ]);
+    } finally {
+        console.log("Request completed.");
+        setIsLoading(false);
+    }
+};
+
+
+
+
+
+  return (
+    <div className="flex flex-col h-screen">
+      {/* Navbar at the top */}
+      <Navbar />
+
+      {/* Main Chat Layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar for Chats */}
+        <Card className="w-1/4 bg-gray-900 text-white flex flex-col shadow-lg">
+      <CardHeader className="py-4 border-b border-gray-700">
+        <CardTitle className="text-lg flex justify-between items-center">
+          Your Chats
+          <Button variant="outline" size="sm" onClick={createNewWindow}>
+            <PlusCircle size={16} />
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <ScrollArea className="flex-grow p-2 overflow-y-auto">
+        {windows.map((window) => (
+          <div
+          key={window.windowId}
+          className={`p-3 rounded-md cursor-pointer transition-all ${
+            activeWindow === window.windowId ? "bg-primary/10 border border-primary/20" : "hover:bg-gray-800"
+          }`}
+          onClick={() => handleWindowSwitch(window.windowId)}  // Use new function
+        >        
+        
+            <div className="flex items-center gap-2 truncate">
+              <MessageSquare size={16} className="text-gray-400" />
+              <span className="truncate">{window.name || `Chat ${window.windowId}`}</span>
+            </div>
+          </div>
+        ))}
+      </ScrollArea>
+    </Card>
+
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col bg-gray-100 p-4">
+          <ScrollArea className="flex-1 overflow-y-auto">
+            {messages.map((message, index) => (
+              <div key={index} className={`mb-4 flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[80%] p-3 rounded-lg ${message.role === "user" ? "bg-blue-500 text-white" : "bg-gray-200 text-black"
+                    }`}
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                </div>
+              </div>
+            ))}
+
+          </ScrollArea>
+          <Separator />
+          <form onSubmit={handleManualSubmit} className="flex w-full space-x-2 p-2">
+            <Input value={input} onChange={handleInputChange} placeholder="Type your message..." disabled={isLoading} />
+            <Button type="submit" size="icon" disabled={isLoading}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  );
+}

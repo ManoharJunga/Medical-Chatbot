@@ -40,9 +40,12 @@ export default function Login() {
         throw new Error(data.message || "Login failed")
       }
 
-      if (data.token) {
+      if (data.token && data.user) {
+        // Store token and user details in localStorage
         localStorage.setItem("token", data.token)
-        router.push("/dashboard")
+        localStorage.setItem("user", JSON.stringify(data.user)) // Storing user details
+
+        router.push("/dashboard") // Redirect to dashboard
       } else {
         throw new Error("Invalid response from server")
       }
