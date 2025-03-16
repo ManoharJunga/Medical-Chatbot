@@ -7,7 +7,7 @@ const doctorRoutes = require("./routes/doctorRoutes");
 const authRoutes = require("./routes/authRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const chatWindowRoutes = require("./routes/chatWindowRoutes");
-
+const userRoutes = require("./routes/userRoutes");
 
 
 const app = express();
@@ -25,7 +25,9 @@ app.use("/api/doctors", doctorRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/chat-windows", chatWindowRoutes);
+app.use("/api/users", userRoutes);
 
+console.log("JWT_SECRET:", process.env.JWT_SECRET);
 
 
 const PORT = 5001;

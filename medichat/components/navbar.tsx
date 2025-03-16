@@ -4,10 +4,14 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, UserCircle } from "lucide-react";
+import { useRouter } from "next/navigation"; // Import useRouter
+
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; profilePic?: string } | null>(null);
+  const router = useRouter(); // Initialize router
+
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -22,11 +26,11 @@ export function Navbar() {
     }
   }, []);
   
-
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
+    router.push("/"); // Redirect to home page after logout
   };
 
   return (
@@ -39,24 +43,31 @@ export function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-gray-700 hover:text-primary font-medium">Home</Link>
-            <Link href="/about" className="text-gray-700 hover:text-primary font-medium">About</Link>
-            <Link href="/chat" className="text-gray-700 hover:text-primary font-medium">Chatbot</Link>
-            <Link href="/contact" className="text-gray-700 hover:text-primary font-medium">Contact</Link>
+            {!user ? (
+              <>
+                <Link href="/" className="text-gray-700 hover:text-primary font-medium">Home</Link>
+                <Link href="/about" className="text-gray-700 hover:text-primary font-medium">About</Link>
+                <Link href="/contact" className="text-gray-700 hover:text-primary font-medium">Contact</Link>
+              </>
+            ) : (
+              <Link href="/chat" className="text-gray-700 hover:text-primary font-medium">Chatbot</Link>
+            )}
           </nav>
 
-          {/* Profile or Login Buttons */}
+          {/* Profile + Logout Button */}
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
-              <div className="flex items-center space-x-3">
-                {user.profilePic ? (
-                  <img src={user.profilePic} alt="Profile" className="w-8 h-8 rounded-full" />
-                ) : (
-                  <UserCircle size={32} className="text-gray-500" />
-                )}
-                <span className="text-gray-700 font-medium">{user.name}</span>
+              <>
+                <Link href="/profile" className="flex items-center space-x-2">
+                  {user.profilePic ? (
+                    <img src={user.profilePic} alt="Profile" className="w-8 h-8 rounded-full" />
+                  ) : (
+                    <UserCircle size={32} className="text-gray-500" />
+                  )}
+                  <span className="text-gray-700 font-medium">{user.name}</span>
+                </Link>
                 <Button variant="outline" onClick={handleLogout}>Logout</Button>
-              </div>
+              </>
             ) : (
               <>
                 <Link href="/login">
@@ -80,14 +91,27 @@ export function Navbar() {
       {isMenuOpen && (
         <div className="md:hidden bg-white border-b border-gray-200 px-4 py-2">
           <nav className="flex flex-col space-y-4 py-4">
-            <Link href="/" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Home</Link>
-            <Link href="/about" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>About</Link>
-            <Link href="/chat" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Chatbot</Link>
-            <Link href="/contact" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Contact</Link>
+            {!user ? (
+              <>
+                <Link href="/" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Home</Link>
+                <Link href="/about" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>About</Link>
+                <Link href="/contact" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Contact</Link>
+              </>
+            ) : (
+              <Link href="/chat" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Chatbot</Link>
+            )}
+
             <div className="flex flex-col space-y-2 pt-2 border-t border-gray-200">
               {user ? (
                 <div className="flex flex-col space-y-2">
-                  <span className="text-center font-medium">{user.name}</span>
+                  <Link href="/profile" className="flex items-center space-x-2">
+                    {user.profilePic ? (
+                      <img src={user.profilePic} alt="Profile" className="w-8 h-8 rounded-full" />
+                    ) : (
+                      <UserCircle size={32} className="text-gray-500" />
+                    )}
+                    <span className="text-center font-medium">{user.name}</span>
+                  </Link>
                   <Button variant="outline" className="w-full" onClick={handleLogout}>Logout</Button>
                 </div>
               ) : (
