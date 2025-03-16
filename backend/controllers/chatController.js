@@ -7,7 +7,7 @@ const ChatWindow = require("../models/ChatWindow");
 const processMessage = async (req, res) => {
     try {
         const { userId, message, windowId } = req.body; // ✅ Accept `windowId`
-        
+
         if (!userId || !message || !windowId) {
             return res.status(400).json({ error: "User ID, message, and window ID are required" });
         }
@@ -33,12 +33,21 @@ const processMessage = async (req, res) => {
                 {
                     parts: [
                         {
-                            text: `You are an AI-powered medical assistant. Provide accurate, concise, and relevant medical information based on user queries. Ensure responses are medically informative but avoid diagnosing, prescribing treatment, or giving urgent medical advice. Here is the user message: "${message}"`
+                            text: `You are MedBot, a friendly and knowledgeable AI medical assistant. Engage users with clear, concise, and medically informative responses. Provide evidence-based health guidance in an easy-to-understand way.  
+        
+        - Be empathetic and conversational.  
+        - Ask follow-up questions when needed.  
+        - Offer general health insights but avoid diagnosing conditions, prescribing medications, or giving emergency advice.  
+        
+        If a question requires urgent medical attention, **strongly** advise the user to consult a healthcare professional.  
+        
+        Here is the user’s message: "${message}"`
                         }
                     ]
                 }
             ]
         };
+
 
         const response = await axios.post(url, requestBody, {
             headers: { "Content-Type": "application/json" }

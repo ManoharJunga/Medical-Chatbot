@@ -3,11 +3,11 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const connectDB = require("./config/db");
-const doctorRoutes = require("./routes/doctorRoutes");
 const authRoutes = require("./routes/authRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const chatWindowRoutes = require("./routes/chatWindowRoutes");
 const userRoutes = require("./routes/userRoutes");
+const doctorRoutes = require("./routes/doctorRoutes");
 
 
 const app = express();
@@ -21,11 +21,12 @@ app.use(bodyParser.json());
 connectDB();
 
 // Routes
-app.use("/api/doctors", doctorRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/chat-windows", chatWindowRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/doctors", doctorRoutes);
+
 
 console.log("JWT_SECRET:", process.env.JWT_SECRET);
 

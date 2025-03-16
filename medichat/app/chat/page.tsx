@@ -49,7 +49,7 @@ export default function ChatPage() {
       }
     }
   }, []);
-  
+
   useEffect(() => {
     if (lastMessageRef.current) {
       lastMessageRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -133,62 +133,67 @@ export default function ChatPage() {
   const handleManualSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input.trim()) return;
-
+  
     const userId = user?.id || user?._id;
-    const windowId = localStorage.getItem("activeWindow") || window.location.pathname; // Retrieve saved window ID
-
-    console.log("Submitting message...");
-    console.log("User ID:", userId);
-    console.log("Window ID:", windowId);
-    console.log("Input message:", input);
-
+    const windowId = localStorage.getItem("activeWindow") || window.location.pathname;
+  
     if (!userId) {
-      console.error("User ID is missing");
-      setMessages((prev) => [
-        ...prev,
-        { role: "bot", content: "Error: User not found. Please log in again." },
-      ]);
+      setMessages((prev) => [...prev, { role: "bot", content: "Error: User not found. Please log in again." }]);
       return;
     }
-
+  
     const userMessage = { role: "user", content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
-
+  
     try {
-      console.log("Sending request to API...");
-      const response = await fetch("http://localhost:5001/api/chat/message", {
+      // Send user input to AI chat API
+      const chatResponse = await fetch("http://localhost:5001/api/chat/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, windowId, message: input }), // Sending windowId
+        body: JSON.stringify({ userId, windowId, message: input }),
       });
-
-      console.log("Response status:", response.status);
-
-      const data = await response.json();
-      console.log("Response data:", data);
-
-      if (!response.ok) throw new Error(data.error || "Failed to get a response");
-
-      setMessages((prev) => [
-        ...prev,
-        { role: "bot", content: data.message || "I'm sorry, I didn't understand that." },
-      ]);
-
+  
+      const chatData = await chatResponse.json();
+      if (!chatResponse.ok) throw new Error(chatData.error || "Failed to get a response");
+  
+      const botMessage = chatData.message || "I'm sorry, I didn't understand that.";
+  
+      setMessages((prev) => [...prev, { role: "bot", content: botMessage }]);
+  
+      // Extract symptoms from bot response
+      const extractedSymptoms = extractSymptoms(botMessage);
+      
+      if (extractedSymptoms.length > 0) {
+        // Fetch doctor recommendations
+        const doctorResponse = await fetch("http://localhost:5001/api/doctors/find", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ symptoms: extractedSymptoms }),
+        });
+  
+        const doctorData = await doctorResponse.json();
+        if (!doctorResponse.ok) throw new Error(doctorData.error || "Failed to fetch doctors");
+  
+        // Display bot message + doctor recommendations
+        setMessages((prev) => [
+          ...prev,
+          { role: "bot", content: `Based on your symptoms, here are some recommended doctors:`, doctors: doctorData }
+        ]);
+      }
+  
     } catch (error) {
-      console.error("Error fetching bot response:", error);
-      setMessages((prev) => [
-        ...prev,
-        { role: "bot", content: "Sorry, something went wrong. Please try again." },
-      ]);
+      setMessages((prev) => [...prev, { role: "bot", content: "Sorry, something went wrong. Please try again." }]);
     } finally {
-      console.log("Request completed.");
       setIsLoading(false);
     }
   };
-
-
+  
+  const extractSymptoms = (message: string) => {
+    const symptomList = ["migraine", "seizures", "dizziness", "fever", "cough", "pain", "fatigue", "anxiety"];
+    return symptomList.filter(symptom => message.toLowerCase().includes(symptom));
+  };
 
 
 
@@ -246,7 +251,7 @@ export default function ChatPage() {
             {messages.map((message, index) => (
               <div
                 key={index}
-                ref={index === messages.length - 1 ? lastMessageRef : null} // Attach ref to the last message
+                ref={index === messages.length - 1 ? lastMessageRef : null}
                 className={`mb-4 flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
@@ -254,6 +259,20 @@ export default function ChatPage() {
                     }`}
                 >
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+
+                  {/* Display doctor recommendations */}
+                  {message.doctors && (
+                    <div className="mt-2 p-2 bg-white border border-gray-300 rounded-lg">
+                      <h3 className="font-semibold text-black mb-1">Recommended Doctors:</h3>
+                      {message.doctors.map((doctor, i) => (
+                        <div key={i} className="mb-2 p-2 border rounded-lg shadow-sm bg-gray-100">
+                          <p><strong>Name:</strong> {doctor.name}</p>
+                          <p><strong>Specialty:</strong> {doctor.specialty}</p>
+                          <p><strong>Contact:</strong> {doctor.contact}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -266,6 +285,7 @@ export default function ChatPage() {
             </Button>
           </form>
         </div>
+
       </div>
     </div>
 
