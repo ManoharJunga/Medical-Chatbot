@@ -15,6 +15,8 @@ exports.createChatWindow = async (req, res) => {
     const newChatWindow = new ChatWindow({ userId, windowId });
     await newChatWindow.save();
 
+    console.log("Created Chat Window:", newChatWindow); // Log for debugging
+
     res.status(201).json(newChatWindow);
   } catch (error) {
     console.error("Error in createChatWindow:", error);

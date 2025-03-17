@@ -12,6 +12,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Navbar } from "@/components/navbar";
 
+import { getUserFromLocalStorage } from "./services/userService";
+import { fetchChatWindows, createNewWindow, deleteChatWindow } from "./services/chatWindowService";
+import { fetchChatHistory, sendMessage } from "./services/chatService";
+
+
 
 interface ChatMessage {
   role: "user" | "bot";
@@ -39,16 +44,7 @@ export default function ChatPage() {
 
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-        localStorage.removeItem("user");
-        setUser(null);
-      }
-    }
+    setUser(getUserFromLocalStorage());
   }, []);
 
   useEffect(() => {
@@ -59,48 +55,16 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (user?.id) {
-      fetchChatWindows(user.id);
+      fetchChatWindows(user.id).then(setWindows);
     }
   }, [user?.id]);
 
 
   useEffect(() => {
-    if (activeWindow) fetchChatHistory(activeWindow);
-
+    if (activeWindow) {
+      fetchChatHistory(activeWindow).then(setMessages);
+    }
   }, [activeWindow]);
-
-
-  const fetchChatHistory = async (windowId: string) => {
-    try {
-      console.log("Fetching chat history for windowId:", windowId);
-
-      // Clear previous messages before fetching new ones
-      setMessages([]);
-
-      const response = await axios.get(`http://localhost:5001/api/chat/history/${windowId}`);
-
-      if (Array.isArray(response.data)) {
-        const formattedMessages = response.data.flatMap((message) => [
-          { role: "user", content: message.userMessage },
-          { role: "bot", content: message.botResponse }
-        ]);
-
-        setMessages(formattedMessages);
-      }
-    } catch (error) {
-      console.error("Error fetching chat history:", error);
-    }
-  };
-
-
-  const fetchChatWindows = async (userId) => {
-    try {
-      const response = await axios.get(`http://localhost:5001/api/chat-windows/user/${userId}/windows`);
-      setWindows(response.data); // Store chat windows in state
-    } catch (error) {
-      console.error("Error fetching chat windows:", error);
-    }
-  };
 
 
   const createNewWindow = async () => {
@@ -108,17 +72,25 @@ export default function ChatPage() {
       console.error("User ID is missing!");
       return;
     }
-
+  
     try {
       const response = await axios.post("http://localhost:5001/api/chat-windows/new", { userId: user.id });
-
+  
       const newWindow = response.data;
-      setWindows([...windows, { id: newWindow.windowId, name: `Chat ${windows.length + 1}` }]);
+  
+      // Ensure the window is stored with `windowId`
+      const updatedWindows = [...windows, { windowId: newWindow.windowId, name: `Chat ${windows.length + 1}` }];
+  
+      setWindows(updatedWindows);
       setActiveWindow(newWindow.windowId);
+      localStorage.setItem("activeWindow", newWindow.windowId); // Ensure storage update
+  
+      console.log("Created new window:", newWindow.windowId);
     } catch (error) {
       console.error("Error creating chat window:", error);
     }
   };
+  
 
   const deleteChatWindow = async (windowId: string) => {
     try {
@@ -131,10 +103,10 @@ export default function ChatPage() {
 
   const handleWindowSwitch = (windowId: string) => {
     setActiveWindow(windowId);
-    localStorage.setItem("activeWindow", windowId); // Store window ID locally
+    localStorage.setItem("activeWindow", windowId); // Persist active window
     fetchChatHistory(windowId);
-    console.log("new added console", windowId)
-  };
+    console.log("Switched to window:", windowId);
+  };  
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
@@ -143,73 +115,65 @@ export default function ChatPage() {
   const handleManualSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input.trim()) return;
-
+  
     const userId = user?.id;
     const windowId = localStorage.getItem("activeWindow") || window.location.pathname;
-
+  
     if (!userId) {
       setMessages((prev) => [...prev, { role: "bot", content: "Error: User not found. Please log in again." }]);
       return;
     }
-
+  
     const userMessage = { role: "user" as const, content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
-
+  
     console.log("User input:", input); // ✅ Log user input
-
+  
     try {
-      // Send user input to AI chat API
-      const chatResponse = await fetch("http://localhost:5001/api/chat/message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, windowId, message: input }),
-      });
+      // Send user message to AI chat API
+      const botMessage = await sendMessage(userId, windowId, input);
+      console.log("Chat API Response:", botMessage); // ✅ Log API response
+      console.log("Sending message to windowId:", windowId);
 
-      const chatData = await chatResponse.json();
-      console.log("Chat API Response:", chatData); // ✅ Log API response
-
-      if (!chatResponse.ok) throw new Error(chatData.error || "Failed to get a response");
-
-      const botMessage = chatData.message || "I'm sorry, I didn't understand that.";
-
+  
       setMessages((prev) => [...prev, { role: "bot", content: botMessage }]);
-
+  
       // Extract symptoms from bot response
       const extractedSymptoms = extractSymptoms(botMessage);
       console.log("Extracted Symptoms:", extractedSymptoms); // ✅ Log extracted symptoms
-
+  
       if (extractedSymptoms.length > 0) {
         console.log("Fetching doctors for symptoms:", extractedSymptoms); // ✅ Log doctor search request
-
+  
         // Fetch doctor recommendations
         const doctorResponse = await fetch("http://localhost:5001/api/doctors/find", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ symptoms: extractedSymptoms }),
         });
-
+  
         const doctorData = await doctorResponse.json();
         console.log("Doctor API Response:", doctorData); // ✅ Log doctor response
-
+  
         if (!doctorResponse.ok) throw new Error(doctorData.error || "Failed to fetch doctors");
-
+  
         // Display bot message + doctor recommendations
         setMessages((prev) => [
           ...prev,
           { role: "bot", content: `Based on your symptoms, here are some recommended doctors:`, doctors: doctorData }
         ]);
       }
-
+  
     } catch (error) {
-      console.error("Error:", error); // ✅ Log errors
+      console.error("Error:", error);
       setMessages((prev) => [...prev, { role: "bot", content: "Sorry, something went wrong. Please try again." }]);
     } finally {
       setIsLoading(false);
     }
   };
-
+  
 
   const extractSymptoms = (message: string) => {
     const symptomList = [
@@ -291,7 +255,6 @@ export default function ChatPage() {
             )}
           </ScrollArea>
         </Card>
-
 
 
         {/* Chat Area */}
