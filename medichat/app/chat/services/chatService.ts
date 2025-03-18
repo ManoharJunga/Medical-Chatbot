@@ -10,6 +10,7 @@ type ChatMessage = {
 export const fetchChatHistory = async (windowId: string): Promise<ChatMessage[]> => {
     try {
       const response = await axios.get<ChatApiResponse>(`http://localhost:5001/api/chat/history/${windowId}`);
+      
       return response.data.flatMap((msg) => [
         { role: "user", content: msg.userMessage },
         { role: "bot", content: msg.botResponse },

@@ -19,9 +19,9 @@ import { fetchChatHistory, sendMessage } from "./services/chatService";
 interface ChatMessage {
   role: "user" | "bot";
   content: string;
-  doctors?: Doctor[];  
+  doctors?: Doctor[];
 }
-interface Doctor  {
+interface Doctor {
   name: string;
   specialty: string;
   contact: string;
@@ -42,7 +42,8 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
-
+  const [isNewChat, setIsNewChat] = useState(false);
+  
 
   useEffect(() => {
     const storedWindow = localStorage.getItem("activeWindow");
@@ -51,7 +52,7 @@ export default function ChatPage() {
     }
   }, []);
 
-  
+
   useEffect(() => {
     setUser(getUserFromLocalStorage());
   }, []);
@@ -74,8 +75,8 @@ export default function ChatPage() {
       fetchChatHistory(activeWindow).then(setMessages).catch(console.error);
     }
   }, [activeWindow]);
-  
-  
+
+
 
 
   const createChatWindow = async () => {
@@ -83,23 +84,23 @@ export default function ChatPage() {
       console.error("User ID is missing!");
       return;
     }
-  
+
     const newWindow = await createNewWindow(user.id); // Pass userId as an argument
-  
+
     if (!newWindow || !newWindow.windowId) {
       console.error("Invalid response from server:", newWindow);
       return;
     }
-  
+
     const updatedWindows = [...windows, { windowId: newWindow.windowId, name: `Chat ${windows.length + 1}` }];
-  
+
     setWindows(updatedWindows);
     setActiveWindow(newWindow.windowId);
     localStorage.setItem("activeWindow", newWindow.windowId);
-  
+
     console.log("Created new window:", newWindow.windowId);
   };
-  
+
 
   const deleteChatWindow = async (windowId: string) => {
     try {
@@ -204,7 +205,12 @@ export default function ChatPage() {
   };
 
 
-
+  const quickActions = [
+    { label: "Check Symptoms", prompt: "I want to check my symptoms" },
+    { label: "Get Diet Advice", prompt: "Can you give me diet advice for better health?" },
+    { label: "Find a Doctor", prompt: "How do I find a specialist doctor?" },
+    { label: "Mental Health", prompt: "I'm feeling anxious, what can I do?" },
+  ];
 
   return (
     <div className="flex flex-col h-screen">
@@ -272,6 +278,37 @@ export default function ChatPage() {
 
         {/* Chat Area */}
         <div className="flex-1 flex flex-col bg-gray-100 p-4">
+          {/* Quick Actions Section (Only appears when there are no messages) */}
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              {/* Header Section */}
+              <div className="flex items-center gap-3">
+                <div className="rounded-full bg-primary/10 p-3">
+                  <PlusCircle className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold">Start a new conversation</h3>
+              </div>
+
+              <p className="text-gray-500 text-sm text-center">
+                Describe your symptoms or ask health-related questions to get started.
+              </p>
+
+              {/* Quick Actions Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md">
+                {quickActions.map((action, index) => (
+                  <Button
+                    key={index}
+                    className="w-full text-left px-4 py-2 bg-white text-black rounded-md hover:bg-gray-200 transition-all"
+                    onClick={() => setInput(action.prompt)}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Chat Messages */}
           <ScrollArea className="flex-1 overflow-y-auto" ref={scrollRef}>
             {messages.map((message, index) => (
               <div
@@ -302,7 +339,10 @@ export default function ChatPage() {
               </div>
             ))}
           </ScrollArea>
+
           <Separator />
+
+          {/* Input Field */}
           <form onSubmit={handleManualSubmit} className="flex w-full space-x-2 p-2">
             <Input value={input} onChange={handleInputChange} placeholder="Type your message..." disabled={isLoading} />
             <Button type="submit" size="icon" disabled={isLoading}>
@@ -310,6 +350,7 @@ export default function ChatPage() {
             </Button>
           </form>
         </div>
+
 
       </div>
     </div>
