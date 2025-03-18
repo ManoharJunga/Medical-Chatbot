@@ -9,45 +9,44 @@ import { PersonalInfoForm } from "@/components/profile/personal-info-form"
 import { SecuritySettings } from "@/components/profile/security-settings"
 import { AccountStatus } from "@/components/profile/account-status"
 import { useToast } from "@/hooks/use-toast"
+import { getUserFromLocalStorage } from "./services/userService"
 
 export default function ProfilePage() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("personal-info")
   const [user, setUser] = useState<any>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Fetch user data from API
+  useEffect(() => {
+    const storedUser = getUserFromLocalStorage();
+    if (storedUser && storedUser.id) {
+      setUserId(storedUser.id);
+    }
+  }, []);
+
   useEffect(() => {
     const fetchUser = async () => {
-      setIsLoading(true)
+      if (!userId) return;
       try {
-        const response = await fetch("http://localhost:5001/api/users/67d23b4d18df04b9f1f3e797")
-        if (!response.ok) {
-          throw new Error("Failed to fetch user data")
-        }
-        const data = await response.json()
-
-        // Ensure dob is properly parsed
-        if (data.dob) {
-          data.dob = new Date(data.dob)
-        }
-        
-        setUser(data)
+        const response = await fetch(`http://localhost:5001/api/users/${userId}`);
+        if (!response.ok) throw new Error("Failed to fetch user");
+        const data = await response.json();
+        setUser(data);
       } catch (error) {
-        console.error("Error fetching user data:", error)
-      } finally {
-        setIsLoading(false)
+        console.error("Error fetching user:", error);
       }
-    }
+    };
 
-    fetchUser()
-  }, [])
+    fetchUser();
+  }, [userId]);
+
 
   const updateUserInfo = async (updatedInfo: Partial<typeof user>) => {
     setIsLoading(true)
 
     try {
-      const response = await fetch("http://localhost:5001/api/users/67d23b4d18df04b9f1f3e797", {
+      const response = await fetch(`http://localhost:5001/api/users/${userId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

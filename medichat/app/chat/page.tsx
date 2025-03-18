@@ -76,9 +76,6 @@ export default function ChatPage() {
     }
   }, [activeWindow]);
 
-
-
-
   const createChatWindow = async () => {
     if (!user || !user.id) {
       console.error("User ID is missing!");

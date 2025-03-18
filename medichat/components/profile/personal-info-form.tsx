@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,7 +14,7 @@ interface PersonalInfoFormProps {
     name: string
     email: string
     phone: string
-    dob: Date
+    dob?: Date | null
     gender: string
   }
   onSubmit: (data: any) => void
@@ -27,7 +26,7 @@ export function PersonalInfoForm({ user, onSubmit, isLoading }: PersonalInfoForm
     name: user.name,
     email: user.email,
     phone: user.phone,
-    dob: user.dob.toISOString().split("T")[0],
+    dob: user.dob ? new Date(user.dob).toISOString().split("T")[0] : "",
     gender: user.gender,
   })
 
@@ -44,7 +43,7 @@ export function PersonalInfoForm({ user, onSubmit, isLoading }: PersonalInfoForm
     e.preventDefault()
     onSubmit({
       ...formData,
-      dob: new Date(formData.dob),
+      dob: formData.dob ? new Date(formData.dob) : null, // Handle empty date case
     })
   }
 
@@ -76,7 +75,7 @@ export function PersonalInfoForm({ user, onSubmit, isLoading }: PersonalInfoForm
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="dob">Date of Birth</Label>
-              <Input id="dob" name="dob" type="date" value={formData.dob} onChange={handleChange} required />
+              <Input id="dob" name="dob" type="date" value={formData.dob} onChange={handleChange} />
             </div>
 
             <div className="space-y-2">
@@ -110,4 +109,3 @@ export function PersonalInfoForm({ user, onSubmit, isLoading }: PersonalInfoForm
     </Card>
   )
 }
-

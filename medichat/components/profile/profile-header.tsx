@@ -30,12 +30,16 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
     <div className="flex flex-col md:flex-row items-start md:items-center gap-6 bg-white p-6 rounded-lg shadow-sm border">
       <Avatar className="h-24 w-24">
         <AvatarImage src="/placeholder.svg?height=96&width=96" alt={user.name} />
-        <AvatarFallback className="text-2xl">
-          {user.name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")}
-        </AvatarFallback>
+        {user ? (
+          <AvatarFallback className="text-2xl">
+            {user.name
+              .split(" ")
+              .map((n) => n[0])
+              .join("")}
+          </AvatarFallback>
+        ) : (
+          <AvatarFallback className="text-2xl">?</AvatarFallback>
+        )}
       </Avatar>
 
       <div className="flex-1">
