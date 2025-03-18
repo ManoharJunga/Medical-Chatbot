@@ -28,7 +28,6 @@ interface Doctor  {
 };
 
 interface ChatWindow {
-  id: string;
   name: string;
   windowId: string;
 }
