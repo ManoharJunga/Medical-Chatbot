@@ -45,7 +45,14 @@ export default function ChatPage() {
   const lastMessageRef = useRef<HTMLDivElement>(null);
 
 
+  useEffect(() => {
+    const storedWindow = localStorage.getItem("activeWindow");
+    if (storedWindow) {
+      setActiveWindow(storedWindow); // Restore active window after refresh
+    }
+  }, []);
 
+  
   useEffect(() => {
     setUser(getUserFromLocalStorage());
   }, []);
@@ -65,9 +72,11 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (activeWindow) {
-      fetchChatHistory(activeWindow).then(setMessages);
+      fetchChatHistory(activeWindow).then(setMessages).catch(console.error);
     }
   }, [activeWindow]);
+  
+  
 
 
   const createChatWindow = async () => {
