@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,8 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2, AlertCircle, ShieldCheck } from "lucide-react"
 
 interface SecuritySettingsProps {
-  onChangePassword: (currentPassword: string, newPassword: string) => void
-  isLoading: boolean
+  onChangePassword: (currentPassword: string, newPassword: string, confirmNewPassword: string) => void;
+  isLoading: boolean;
 }
 
 export function SecuritySettings({ onChangePassword, isLoading }: SecuritySettingsProps) {
@@ -20,38 +19,38 @@ export function SecuritySettings({ onChangePassword, isLoading }: SecuritySettin
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
-  })
+  });
 
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    setError(null)
-  }
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setError(null);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (formData.newPassword !== formData.confirmPassword) {
-      setError("New password and confirm password do not match")
-      return
+      setError("New password and confirm password do not match");
+      return;
     }
 
     if (formData.newPassword.length < 8) {
-      setError("Password must be at least 8 characters long")
-      return
+      setError("Password must be at least 8 characters long");
+      return;
     }
 
-    onChangePassword(formData.currentPassword, formData.newPassword)
+    onChangePassword(formData.currentPassword, formData.newPassword, formData.confirmPassword);
 
     // Reset form after submission
     setFormData({
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
-    })
-  }
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -152,7 +151,7 @@ export function SecuritySettings({ onChangePassword, isLoading }: SecuritySettin
               <div>
                 <h4 className="font-medium">Don't reuse passwords</h4>
                 <p className="text-sm text-gray-500">
-                  Use a unique password for your MediChat account that you don't use on other websites.
+                  Use a unique password for your account that you don't use on other websites.
                 </p>
               </div>
             </div>
@@ -160,6 +159,5 @@ export function SecuritySettings({ onChangePassword, isLoading }: SecuritySettin
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
-

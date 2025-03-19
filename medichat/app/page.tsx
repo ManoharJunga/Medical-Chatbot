@@ -5,6 +5,8 @@ import { Footer } from "@/components/footer"
 import { HowItWorks } from "@/components/how-it-works"
 import { Features } from "@/components/features"
 import { Testimonials } from "@/components/testimonials"
+import Image from "next/image";
+import main from "@/public/main.png";
 
 export default function Home() {
   return (
@@ -24,8 +26,8 @@ export default function Home() {
               </Button>
             </Link>
             <div className="mt-12">
-              <img
-                src="/placeholder.svg?height=400&width=800"
+              <Image
+                src={main}
                 alt="Medical AI Assistant Interface"
                 className="rounded-lg shadow-xl mx-auto"
               />

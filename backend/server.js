@@ -27,9 +27,7 @@ app.use("/api/chat-windows", chatWindowRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/doctors", doctorRoutes);
 
-
 console.log("JWT_SECRET:", process.env.JWT_SECRET);
-
 
 const PORT = 5001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

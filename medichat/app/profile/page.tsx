@@ -15,15 +15,22 @@ export default function ProfilePage() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("personal-info")
   const [user, setUser] = useState<any>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     const storedUser = getUserFromLocalStorage();
-    if (storedUser && storedUser.id) {
-      setUserId(storedUser.id);
+    if (storedUser) {
+      if (storedUser.id) {
+        setUserId(storedUser.id);
+      }
+      if (storedUser.email) {
+        setUserEmail(storedUser.email);
+      }
     }
   }, []);
+
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -76,19 +83,49 @@ export default function ProfilePage() {
     }
   }
 
-  const changePassword = async (currentPassword: string, newPassword: string) => {
-    setIsLoading(true)
+  const changePassword = async (currentPassword: string, newPassword: string, confirmNewPassword: string) => {
+    setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+        if (!userEmail) {
+            throw new Error("User email not found. Please log in again.");
+        }
 
-      toast({
-        title: "Password changed",
-        description: "Your password has been changed successfully.",
-      })
-    }, 1000)
-  }
+        console.log("🔹 Sending request with:", { email: userEmail, currentPassword, newPassword, confirmNewPassword });
+
+        const response = await fetch("http://localhost:5001/api/auth/password", {
+            method: "PUT", // Ensure it's PUT, not POST
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email: userEmail, currentPassword, newPassword, confirmNewPassword }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Failed to change password");
+        }
+
+        toast({
+            title: "Password changed",
+            description: "Your password has been changed successfully.",
+        });
+    } catch (error: any) {
+        console.error("🚨 Error changing password:", error);
+        toast({
+            title: "Password change failed",
+            description: error.message || "There was an error changing your password.",
+        });
+    } finally {
+        setIsLoading(false);
+    }
+};
+
+
+
+
+  
 
   const requestVerification = async () => {
     setIsLoading(true)
