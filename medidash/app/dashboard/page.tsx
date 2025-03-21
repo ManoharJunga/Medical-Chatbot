@@ -1,3 +1,4 @@
+"use client"; 
 import { Suspense } from "react"
 import { ArrowDown, ArrowUp, Bell, Calendar, Clock, FileText, InfoIcon, Video } from "lucide-react"
 import { Button } from "@/components/ui/button"

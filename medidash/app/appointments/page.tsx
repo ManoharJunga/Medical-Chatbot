@@ -1,3 +1,5 @@
+"use client";
+
 import { CalendarIcon, ChevronLeft, ChevronRight, Filter, Plus, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,131 +12,108 @@ import { AppointmentsList } from "@/components/appointments-list"
 import { UpcomingAppointments } from "@/components/upcoming-appointments"
 import { EmergencyCases } from "@/components/emergency-cases"
 import { AppointmentCalendarView } from "@/components/appointment-calendar-view"
+import { useState } from "react";
 
 export default function AppointmentsPage() {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+
   return (
-    <div className="flex flex-col gap-5 p-6">
+    <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Appointments</h1>
-          <p className="text-muted-foreground">Manage your schedule and patient appointments</p>
+          <h1 className="text-2xl font-semibold">Appointments</h1>
+          <p className="text-sm text-muted-foreground">Manage your schedule and patient appointments</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="relative w-64">
+        <div className="flex items-center gap-3">
+          <div className="relative w-56">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Search appointments..." className="w-full pl-9" />
+            <Input type="search" placeholder="Search appointments..." className="w-full pl-8 text-sm" />
           </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button size="sm">
+            <Plus className="mr-1 h-4 w-4" />
             New Appointment
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="calendar" className="space-y-4">
-        <TabsList>
+      <Tabs defaultValue="calendar" className="space-y-3">
+        <TabsList className="space-x-2">
           <TabsTrigger value="calendar">
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            Calendar View
+            <CalendarIcon className="mr-1 h-4 w-4" /> Calendar View
           </TabsTrigger>
           <TabsTrigger value="upcoming">
-            <ChevronRight className="mr-2 h-4 w-4" />
-            Upcoming
-            <Badge variant="outline" className="ml-2 bg-primary/10 text-xs">
-              12
-            </Badge>
+            <ChevronRight className="mr-1 h-4 w-4" /> Upcoming
+            <Badge variant="outline" className="ml-1 text-xs">12</Badge>
           </TabsTrigger>
           <TabsTrigger value="requests">
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Requests
-            <Badge variant="outline" className="ml-2 bg-primary/10 text-xs">
-              8
-            </Badge>
+            <ChevronLeft className="mr-1 h-4 w-4" /> Requests
+            <Badge variant="outline" className="ml-1 text-xs">8</Badge>
           </TabsTrigger>
           <TabsTrigger value="emergency">
-            <Badge variant="destructive" className="mr-2 h-2 w-2 p-0 rounded-full" />
-            Emergency
-            <Badge variant="outline" className="ml-2 bg-red-500/10 text-red-500 text-xs">
-              3
-            </Badge>
+            <Badge variant="destructive" className="mr-1 h-2 w-2 p-0 rounded-full" /> Emergency
+            <Badge variant="outline" className="ml-1 text-xs text-red-500">3</Badge>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="calendar" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <TabsContent value="calendar" className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
             <Card className="md:col-span-1">
-              <CardHeader>
-                <CardTitle>Calendar</CardTitle>
-                <CardDescription>Select a date to view appointments</CardDescription>
+              <CardHeader className="p-3">
+                <CardTitle className="text-sm">Calendar</CardTitle>
+                <CardDescription className="text-xs">Select a date to view appointments</CardDescription>
               </CardHeader>
-              <CardContent className="p-0">
-                <Calendar mode="single" className="rounded-md border" />
-                <div className="p-4 space-y-4">
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Filter By</div>
-                    <Select defaultValue="all">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Appointments</SelectItem>
-                        <SelectItem value="video">Video Consultations</SelectItem>
-                        <SelectItem value="in-person">In-Person Visits</SelectItem>
-                        <SelectItem value="emergency">Emergency Cases</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <CardContent className="p-3">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  className="rounded-md border w-full" // ✅ Ensures full-width display
+                />
 
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Status</div>
-                    <Select defaultValue="all">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="pt-2">
-                    <Button variant="outline" className="w-full">
-                      <Filter className="mr-2 h-4 w-4" />
-                      Apply Filters
-                    </Button>
-                  </div>
+                <div className="mt-3 space-y-2">
+                  <div className="text-xs font-medium">Filter By</div>
+                  <Select defaultValue="all">
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Appointments</SelectItem>
+                      <SelectItem value="video">Video Consultations</SelectItem>
+                      <SelectItem value="in-person">In-Person Visits</SelectItem>
+                      <SelectItem value="emergency">Emergency Cases</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" className="w-full text-xs h-8 mt-2">
+                    <Filter className="mr-1 h-3 w-3" /> Apply Filters
+                  </Button>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="md:col-span-3">
-              <CardHeader>
-                <CardTitle>Appointments for Today</CardTitle>
-                <CardDescription>Wednesday, March 20, 2025</CardDescription>
+              <CardHeader className="p-3">
+                <CardTitle className="text-sm">Appointments for Today</CardTitle>
+                <CardDescription className="text-xs">Wednesday, March 20, 2025</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3">
                 <AppointmentCalendarView />
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="upcoming" className="space-y-4">
+        <TabsContent value="upcoming" className="space-y-3">
           <UpcomingAppointments />
         </TabsContent>
 
-        <TabsContent value="requests" className="space-y-4">
+        <TabsContent value="requests" className="space-y-3">
           <AppointmentsList type="requests" />
         </TabsContent>
 
-        <TabsContent value="emergency" className="space-y-4">
+        <TabsContent value="emergency" className="space-y-3">
           <EmergencyCases />
         </TabsContent>
       </Tabs>
     </div>
   )
 }
-

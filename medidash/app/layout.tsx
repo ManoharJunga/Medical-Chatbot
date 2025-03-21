@@ -11,7 +11,6 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Doctor Dashboard",
   description: "Medical professional dashboard for managing patients and appointments",
-  generator: "v0.dev",
 };
 
 export default function RootLayout({
