@@ -8,6 +8,7 @@ router.post("/add", doctorController.addDoctor);
 // Get all doctors
 router.get("/all", doctorController.getAllDoctors);
 
+router.get("/docuser/:id", doctorController.getDoctorById);
 // Get doctors by symptoms
 router.post("/find", doctorController.getDoctorsBySymptoms);
 

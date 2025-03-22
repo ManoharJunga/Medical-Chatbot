@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Calendar,
   ChevronDown,
@@ -17,11 +17,11 @@ import {
   CreditCard,
   LineChart,
   BellRing,
-} from "lucide-react"
-import { useTheme } from "next-themes"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+} from "lucide-react";
+import { useTheme } from "next-themes";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -34,7 +34,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 const routes = [
   { path: "/dashboard", label: "Dashboard", icon: Home },
@@ -45,17 +45,50 @@ const routes = [
   { path: "/billing", label: "Billing", icon: CreditCard },
   { path: "/analytics", label: "Analytics", icon: LineChart },
   { path: "/notifications", label: "Notifications", icon: BellRing },
-]
+];
 
 export function DoctorSidebar() {
-  const pathname = usePathname()
-  const { theme, setTheme } = useTheme()
-  const router = useRouter()
+  const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
+  const router = useRouter();
 
+  // State to store doctor details
+  const [doctor, setDoctor] = useState<{ name: string; specialty: string; avatar: string } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return; // Prevent SSR issues
+
+    const userID = localStorage.getItem("userID");
+    if (!userID) {
+      router.push("/login");
+      return;
+    }
+  
+    fetch(`http://localhost:5001/api/doctors/docuser/${userID}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data._id) {  // Ensure valid data
+          setDoctor({
+            name: data.name || "Unknown Doctor",
+            specialty: data.specialty || "Unknown Specialty",
+            avatar: data.avatar || "/placeholder.svg?height=32&width=32",
+          });
+        } else {
+          localStorage.removeItem("userID");  // Clear invalid user data
+          router.push("/dashboard");
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching doctor details:", error);
+        router.push("/dashboard"); // Redirect on error
+      });
+  }, [router]);
+  
   const handleLogout = () => {
-    document.cookie = "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
-    router.push("/login")
-  }
+    document.cookie = "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    localStorage.removeItem("userID"); // Remove userID from storage
+    router.push("/login");
+  };
 
   return (
     <Sidebar className="w-64 min-w-[16rem] h-screen border-r border-border bg-sidebar">
@@ -88,56 +121,60 @@ export function DoctorSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Sidebar Footer */}
+      {/* Sidebar Footer with Doctor Details */}
       <SidebarFooter className="border-t p-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-9 w-9">
-              <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Dr. Smith" />
-              <AvatarFallback>DS</AvatarFallback>
-            </Avatar>
-            <div className="text-sm">
-              <div className="font-medium">Dr. Smith</div>
-              <div className="text-xs text-muted-foreground">Cardiologist</div>
+        {doctor ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={doctor.avatar} alt={doctor.name} />
+                <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div className="text-sm">
+                <div className="font-medium">{doctor.name}</div>
+                <div className="text-xs text-muted-foreground">{doctor.specialty}</div>
+              </div>
             </div>
-          </div>
 
-          {/* Dropdown Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href="/settings">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-                {theme === "dark" ? (
-                  <>
-                    <Sun className="mr-2 h-4 w-4" />
-                    <span>Light mode</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="mr-2 h-4 w-4" />
-                    <span>Dark mode</span>
-                  </>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+            {/* Dropdown Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+                  {theme === "dark" ? (
+                    <>
+                      <Sun className="mr-2 h-4 w-4" />
+                      <span>Light mode</span>
+                    </>
+                  ) : (
+                    <>
+                      <Moon className="mr-2 h-4 w-4" />
+                      <span>Dark mode</span>
+                    </>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground">Loading doctor info...</div>
+        )}
       </SidebarFooter>
       <SidebarTrigger />
     </Sidebar>
-  )
+  );
 }

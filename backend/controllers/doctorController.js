@@ -24,6 +24,23 @@ exports.getAllDoctors = async (req, res) => {
     }
 };
 
+exports.getDoctorById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const doctor = await Doctor.findById(id);
+        
+        if (!doctor) {
+            return res.status(404).json({ error: "Doctor not found" });
+        }
+
+        res.status(200).json(doctor);
+    } catch (error) {
+        console.error("Error fetching doctor by ID:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+};
+
+
 // Get doctors based on symptoms
 exports.getDoctorsBySymptoms = async (req, res) => {
     try {

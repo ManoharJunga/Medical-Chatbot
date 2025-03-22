@@ -1,10 +1,10 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import axios from "axios"
 import { Eye, EyeOff, Lock, Mail, Stethoscope } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,23 +21,48 @@ export default function LoginPage() {
   const [error, setError] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setIsLoading(true)
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+  
+    console.log("Attempting login with:", { email, password });
+  
+    try {
+      const response = await axios.post("http://localhost:5001/api/auth/doctors/login", {
+        email,
+        password,
+      });
+  
+      console.log("Login API response:", response.data);
+  
+      if (response.data.token) {
+        const { token, doctor } = response.data;
 
-    // Simulate API call
-    setTimeout(() => {
-      // For demo purposes, hardcoded credentials
-      if (email === "doctor@example.com" && password === "password") {
-        // Set a cookie to simulate authentication
-        document.cookie = "auth=true; path=/; max-age=86400"
-        router.push("/dashboard")
+        if (token && doctor) {
+          localStorage.setItem("token", token);
+          localStorage.setItem("doctorId", doctor._id);
+          console.log("Doctor ID:", doctor._id);
+          console.log("Login successful, redirecting...");
+          router.push("/dashboard");
+        } else {
+          setError("Invalid email or password");
+        }        
+  
+        console.log("Doctor ID:", response.data.doctor._id);
+        console.log("Login successful, redirecting...");
+        router.push("/dashboard"); // Redirect on success
       } else {
-        setError("Invalid email or password")
-        setIsLoading(false)
+        console.log("Login failed:", response.data.message);
+        setError(response.data.message || "Invalid email or password");
       }
-    }, 1500)
-  }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Login failed. Please check your credentials and try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
@@ -126,4 +151,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
