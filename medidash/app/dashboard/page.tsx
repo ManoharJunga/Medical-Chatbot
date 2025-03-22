@@ -1,4 +1,5 @@
 "use client"; 
+import { useState, useEffect } from "react";
 import { Suspense } from "react"
 import { ArrowDown, ArrowUp, Bell, Calendar, Clock, FileText, InfoIcon, Video } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,14 +11,31 @@ import { UpcomingAppointments } from "@/components/upcoming-appointments"
 import { EmergencyCases } from "@/components/emergency-cases"
 import { PatientInsights } from "@/components/patient-insights"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
+    const [doctor, setDoctor] = useState<{ name: string; email: string } | null>(null);
+      const router = useRouter();
+  
+
+  useEffect(() => {
+      // Retrieve doctor details from localStorage
+      const doctorData = localStorage.getItem("doctor");
+
+      if (doctorData) {
+        setDoctor(JSON.parse(doctorData));
+      } else {
+        router.push("/login"); // Redirect if not logged in
+      }
+    }, [router]);
+
+
   return (
     <div className="flex flex-col gap-5 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back, Dr. Smith</p>
+          <p className="text-muted-foreground">Welcome back, Dr. {doctor?.name || "Doctor"}</p>
         </div>
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" className="relative">

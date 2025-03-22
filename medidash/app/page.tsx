@@ -1,20 +1,26 @@
-"use client";
+"use client"
 
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { DoctorSidebar } from "@/components/doctor-sidebar";
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Home() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const isAuthenticated = document.cookie.includes("auth=true")
+
+    if (isAuthenticated) {
+      router.push("/dashboard")
+    } else {
+      router.push("/login")
+    }
+  }, [router])
+
+  // Show a loading state while redirecting
   return (
-    <SidebarProvider>
-      <div className="flex h-screen w-full">
-        {/* Sidebar */}
-        <DoctorSidebar />
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden p-6">
-          {children}
-        </div>
-      </div>
-    </SidebarProvider>
-  );
+    <div className="flex h-screen items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+    </div>
+  )
 }

@@ -41,6 +41,7 @@ export default function LoginPage() {
         if (token && doctor) {
           localStorage.setItem("token", token);
           localStorage.setItem("doctorId", doctor._id);
+          localStorage.setItem("doctor", JSON.stringify(doctor));
           console.log("Doctor ID:", doctor._id);
           console.log("Login successful, redirecting...");
           router.push("/dashboard");
