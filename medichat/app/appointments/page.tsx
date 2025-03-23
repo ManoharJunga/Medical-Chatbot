@@ -97,7 +97,7 @@ const Appointments = () => {
                                             </div>
 
                                         </CardHeader>
-                                        <CardContent className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2">
+                                        <CardContent className=" grid grid-cols-1 md:grid-cols-3 gap-2">
                                             <div className="flex items-center text-gray-600">
                                                 <Calendar className="h-4 w-4 mr-2" />
                                                 <span>{new Date(appt.date).toLocaleDateString()}</span>
@@ -127,7 +127,7 @@ const Appointments = () => {
                             )}
                         </TabsContent>
 
-                        <TabsContent value="past">
+                        <TabsContent value="past" className="space-y-6">
                             {pastAppointments.length > 0 ? (
                                 pastAppointments.map((appt) => (
                                     <Card key={appt._id} className="border rounded-lg p-4 bg-white">
@@ -148,7 +148,7 @@ const Appointments = () => {
                                                 </Badge>
                                             </div>
                                         </CardHeader>
-                                        <CardContent className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2">
+                                        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-2">
                                             <div className="flex items-center text-gray-600">
                                                 <Calendar className="h-4 w-4 mr-2" />
                                                 <span>{new Date(appt.date).toLocaleDateString()}</span>

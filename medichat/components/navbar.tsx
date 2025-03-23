@@ -25,7 +25,7 @@ export function Navbar() {
       }
     }
   }, []);
-  
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -50,7 +50,11 @@ export function Navbar() {
                 <Link href="/contact" className="text-gray-700 hover:text-primary font-medium">Contact</Link>
               </>
             ) : (
-              <Link href="/chat" className="text-gray-700 hover:text-primary font-medium">Chatbot</Link>
+              <>
+                <Link href="/chat" className="text-gray-700 hover:text-primary font-medium">Chatbot</Link>
+                <Link href="/appointments" className="text-gray-700 hover:text-primary font-medium">Appointments</Link>
+
+              </>
             )}
           </nav>
 
@@ -98,7 +102,10 @@ export function Navbar() {
                 <Link href="/contact" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Contact</Link>
               </>
             ) : (
-              <Link href="/chat" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Chatbot</Link>
+              <>
+                <Link href="/chat" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Chatbot</Link>
+                <Link href="/appointments" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Appointments</Link>
+              </>
             )}
 
             <div className="flex flex-col space-y-2 pt-2 border-t border-gray-200">
