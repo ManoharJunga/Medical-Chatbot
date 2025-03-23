@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Trash, MessageSquare, PlusCircle, Send, AlertCircle } from "lucide-react";
+import { Trash, MessageSquare, PlusCircle, Send, Calendar } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Navbar } from "@/components/navbar";
@@ -123,10 +123,10 @@ export default function ChatPage() {
   const handleManualSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input.trim()) return;
-  
+
     const userId = user?.id;
     const windowId = localStorage.getItem("activeWindow") || window.location.pathname;
-  
+
     if (!userId) {
       console.log("User not found. Showing default bot response.");
       setMessages((prev) => [
@@ -139,57 +139,57 @@ export default function ChatPage() {
       ]);
       return;
     }
-  
+
     const userMessage = { role: "user" as const, content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
-  
+
     console.log("User input:", input); // ✅ Log user input
-  
+
     try {
       // Send user message to AI chat API
       console.log("Sending request to AI chat API...");
       const botMessage = await sendMessage(userId, windowId, input);
       console.log("Chat API Response:", botMessage); // ✅ Log AI chat response
       console.log("Window ID:", windowId);
-  
+
       setMessages((prev) => [...prev, { role: "bot", content: botMessage }]);
-  
+
       // Extract symptoms from bot response
       const extractedSymptoms = extractSymptoms(botMessage);
       console.log("Extracted Symptoms:", extractedSymptoms); // ✅ Log extracted symptoms
-  
+
       if (extractedSymptoms.length > 0) {
         console.log("Fetching doctors for symptoms:", extractedSymptoms); // ✅ Log doctor search request
-  
+
         // Fetch doctor recommendations
         const doctorResponse = await fetch("http://localhost:5001/api/doctors/find", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ symptoms: extractedSymptoms }),
         });
-  
+
         const doctorData = await doctorResponse.json();
         console.log("Doctor API Response:", doctorData); // ✅ Log doctor API response
-  
+
         if (!doctorResponse.ok) {
           throw new Error(doctorData.error || "Failed to fetch doctors");
         }
-  
+
         // Ensure doctors array exists in the response
         if (!doctorData.doctors || doctorData.doctors.length === 0) {
           console.warn("No doctors found in API response."); // ✅ Log empty response
         } else {
           console.log("Doctors fetched successfully:", doctorData.doctors); // ✅ Log doctor list
         }
-  
+
         // Display bot message + doctor recommendations
         setMessages((prev) => [
           ...prev,
-          { 
-            role: "bot", 
-            content: "Based on your symptoms, here are some recommended doctors:", 
+          {
+            role: "bot",
+            content: "Based on your symptoms, here are some recommended doctors:",
             doctors: doctorData.doctors || [] // Ensures it's always an array
           }
         ]);
@@ -201,8 +201,8 @@ export default function ChatPage() {
       setIsLoading(false);
     }
   };
-  
-  
+
+
   const extractSymptoms = (message: string) => {
     const symptomList = [
       "migraine", "seizures", "dizziness", "fever", "cough", "pain", "fatigue", "anxiety",
@@ -347,18 +347,39 @@ export default function ChatPage() {
                     <div className="mt-2 p-2 bg-white border border-gray-300 rounded-lg">
                       <h3 className="font-semibold text-black mb-1">Recommended Doctors:</h3>
                       {Array.isArray(message.doctors) && message.doctors.length > 0 ? (
-                        <div className="mt-4">
-                          {message.doctors.map((doctor, i) => (
-                            <div key={doctor._id} className="mb-3 p-4 border rounded-lg shadow-md bg-white">
-                              <p className="text-lg font-medium">{doctor.name}</p>
-                              <p className="text-gray-600"><strong>Specialty:</strong> {doctor.specialty}</p>
-                              <p className="text-gray-600"><strong>Contact:</strong> {doctor.contact || "N/A"}</p>
-                              <p className="text-gray-600"><strong>Location:</strong> {doctor.location || "Unknown"}</p>
+                        <div className="mt-6 space-y-4">
+                          {message.doctors.map((doctor) => (
+                            <div
+                              key={doctor._id}
+                              className="flex items-center justify-between p-5 bg-white shadow-lg border border-gray-200 rounded-lg transition-transform hover:scale-[1.02]"
+                            >
+                              {/* Doctor Details */}
+                              <div>
+                                <p className="text-xl font-semibold text-gray-900">{doctor.name}</p>
+                                <p className="text-gray-600 text-sm mt-1">
+                                  <strong className="text-gray-800">Specialty:</strong> {doctor.specialty}
+                                </p>
+                                <p className="text-gray-600 text-sm mt-1">
+                                  <strong className="text-gray-800">Contact:</strong> {doctor.contact || "N/A"}
+                                </p>
+                                <p className="text-gray-600 text-sm mt-1">
+                                  <strong className="text-gray-800">Location:</strong> {doctor.location || "Unknown"}
+                                </p>
+                              </div>
+
+                              {/* Appointment Button */}
+                              <button
+                                className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 transition"
+                                onClick={() => handleAppointment(doctor)}
+                              >
+                                <Calendar size={20} />
+                                <span className="hidden sm:inline">Book Appointment</span>
+                              </button>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-gray-500 mt-2">No doctors found.</p>
+                        <p className="text-gray-500 mt-4 text-center">No doctors found.</p>
                       )}
 
 
