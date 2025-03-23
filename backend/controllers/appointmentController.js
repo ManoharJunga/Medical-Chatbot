@@ -89,3 +89,19 @@ exports.deleteAppointment = async (req, res) => {
     res.status(500).json({ success: false, message: "Error deleting appointment", error: error.message });
   }
 };
+
+exports.getAppointmentsByUser = async (req, res) => {
+  try {
+    const appointments = await Appointment.find({ patient: req.params.userId })
+      .populate("doctor")
+      .populate("patient");
+
+    if (!appointments.length) {
+      return res.status(404).json({ success: false, message: "No appointments found for this user" });
+    }
+
+    res.status(200).json({ success: true, appointments });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error fetching user appointments", error: error.message });
+  }
+};

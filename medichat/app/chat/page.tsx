@@ -11,6 +11,7 @@ import { Trash, MessageSquare, PlusCircle, Send, Calendar } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Navbar } from "@/components/navbar";
+import { useRouter } from "next/navigation";
 
 import { getUserFromLocalStorage } from "./services/userService";
 import { fetchChatWindows, createNewWindow } from "./services/chatWindowService";
@@ -44,6 +45,8 @@ export default function ChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const [isNewChat, setIsNewChat] = useState(false);
+  const router = useRouter();
+
 
 
   useEffect(() => {
@@ -201,6 +204,11 @@ export default function ChatPage() {
       setIsLoading(false);
     }
   };
+
+  const handleAppointment = (doctor: { _id: string }) => {
+    router.push(`/bookappointment?doctorId=${doctor._id}`);
+  };
+  
 
 
   const extractSymptoms = (message: string) => {
@@ -370,8 +378,8 @@ export default function ChatPage() {
                               {/* Appointment Button */}
                               <button
                                 className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 transition"
-                                onClick={() => handleAppointment(doctor)}
-                              >
+                                onClick={() => handleAppointment(doctor)} // ✅ Pass doctor object here
+                                >
                                 <Calendar size={20} />
                                 <span className="hidden sm:inline">Book Appointment</span>
                               </button>
@@ -381,8 +389,6 @@ export default function ChatPage() {
                       ) : (
                         <p className="text-gray-500 mt-4 text-center">No doctors found.</p>
                       )}
-
-
 
                     </div>
                   )}
