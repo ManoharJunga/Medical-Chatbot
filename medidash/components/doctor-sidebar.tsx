@@ -40,14 +40,11 @@ export function DoctorSidebar() {
   const { theme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(true);
   const router = useRouter();
-  const [doctor, setDoctor] = useState<{ name: string; email: string } | null>(null);
-  const [specialty, setSpecialty] = useState<{ name: string; email: string } | null>(null);
-
+  const [doctor, setDoctor] = useState<{ name: string; email: string; specialty: string } | null>(null);
 
   useEffect(() => {
     // Retrieve doctor details from localStorage
     const doctorData = localStorage.getItem("doctor");
-    console.log("sidebar render",doctorData);
     if (doctorData) {
       setDoctor(JSON.parse(doctorData));
     } else {

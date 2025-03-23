@@ -25,6 +25,7 @@ interface Doctor {
   name: string;
   specialty: string;
   contact: string;
+  location?: string;
 };
 
 interface ChatWindow {
@@ -43,7 +44,7 @@ export default function ChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const [isNewChat, setIsNewChat] = useState(false);
-  
+
 
   useEffect(() => {
     const storedWindow = localStorage.getItem("activeWindow");
@@ -122,64 +123,86 @@ export default function ChatPage() {
   const handleManualSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input.trim()) return;
-
+  
     const userId = user?.id;
     const windowId = localStorage.getItem("activeWindow") || window.location.pathname;
-
+  
     if (!userId) {
-      setMessages((prev) => [...prev, { role: "bot", content: "Error: User not found. Please log in again." }]);
+      console.log("User not found. Showing default bot response.");
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          content: "Based on your symptoms, here are some recommended doctors:",
+          doctors: [] // Empty array to prevent errors
+        }
+      ]);
       return;
     }
-
+  
     const userMessage = { role: "user" as const, content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
-
+  
     console.log("User input:", input); // ✅ Log user input
-
+  
     try {
       // Send user message to AI chat API
+      console.log("Sending request to AI chat API...");
       const botMessage = await sendMessage(userId, windowId, input);
-      console.log("Chat API Response:", botMessage); // ✅ Log API response
-      console.log("Sending message to windowId:", windowId);
-
-
+      console.log("Chat API Response:", botMessage); // ✅ Log AI chat response
+      console.log("Window ID:", windowId);
+  
       setMessages((prev) => [...prev, { role: "bot", content: botMessage }]);
-
+  
       // Extract symptoms from bot response
       const extractedSymptoms = extractSymptoms(botMessage);
       console.log("Extracted Symptoms:", extractedSymptoms); // ✅ Log extracted symptoms
-
+  
       if (extractedSymptoms.length > 0) {
         console.log("Fetching doctors for symptoms:", extractedSymptoms); // ✅ Log doctor search request
-
+  
         // Fetch doctor recommendations
         const doctorResponse = await fetch("http://localhost:5001/api/doctors/find", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ symptoms: extractedSymptoms }),
         });
-
+  
         const doctorData = await doctorResponse.json();
-        console.log("Doctor API Response:", doctorData); // ✅ Log doctor response
-
-        if (!doctorResponse.ok) throw new Error(doctorData.error || "Failed to fetch doctors");
-
+        console.log("Doctor API Response:", doctorData); // ✅ Log doctor API response
+  
+        if (!doctorResponse.ok) {
+          throw new Error(doctorData.error || "Failed to fetch doctors");
+        }
+  
+        // Ensure doctors array exists in the response
+        if (!doctorData.doctors || doctorData.doctors.length === 0) {
+          console.warn("No doctors found in API response."); // ✅ Log empty response
+        } else {
+          console.log("Doctors fetched successfully:", doctorData.doctors); // ✅ Log doctor list
+        }
+  
         // Display bot message + doctor recommendations
         setMessages((prev) => [
           ...prev,
-          { role: "bot", content: `Based on your symptoms, here are some recommended doctors:`, doctors: doctorData }
+          { 
+            role: "bot", 
+            content: "Based on your symptoms, here are some recommended doctors:", 
+            doctors: doctorData.doctors || [] // Ensures it's always an array
+          }
         ]);
       }
-
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error fetching doctors:", error);
       setMessages((prev) => [...prev, { role: "bot", content: "Sorry, something went wrong. Please try again." }]);
     } finally {
       setIsLoading(false);
     }
   };
+  
+  
   const extractSymptoms = (message: string) => {
     const symptomList = [
       "migraine", "seizures", "dizziness", "fever", "cough", "pain", "fatigue", "anxiety",
@@ -323,13 +346,23 @@ export default function ChatPage() {
                   {message.doctors && (
                     <div className="mt-2 p-2 bg-white border border-gray-300 rounded-lg">
                       <h3 className="font-semibold text-black mb-1">Recommended Doctors:</h3>
-                      {message.doctors.map((doctor, i) => (
-                        <div key={i} className="mb-2 p-2 border rounded-lg shadow-sm bg-gray-100">
-                          <p><strong>Name:</strong> {doctor.name}</p>
-                          <p><strong>Specialty:</strong> {doctor.specialty}</p>
-                          <p><strong>Contact:</strong> {doctor.contact}</p>
+                      {Array.isArray(message.doctors) && message.doctors.length > 0 ? (
+                        <div className="mt-4">
+                          {message.doctors.map((doctor, i) => (
+                            <div key={doctor._id} className="mb-3 p-4 border rounded-lg shadow-md bg-white">
+                              <p className="text-lg font-medium">{doctor.name}</p>
+                              <p className="text-gray-600"><strong>Specialty:</strong> {doctor.specialty}</p>
+                              <p className="text-gray-600"><strong>Contact:</strong> {doctor.contact || "N/A"}</p>
+                              <p className="text-gray-600"><strong>Location:</strong> {doctor.location || "Unknown"}</p>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      ) : (
+                        <p className="text-gray-500 mt-2">No doctors found.</p>
+                      )}
+
+
+
                     </div>
                   )}
                 </div>

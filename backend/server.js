@@ -9,6 +9,7 @@ const chatWindowRoutes = require("./routes/chatWindowRoutes");
 const userRoutes = require("./routes/userRoutes");
 const doctorRoutes = require("./routes/doctorRoutes");
 const doctorAuthRoutes = require("./routes/doctorAuth.routes");
+const appointmentRoutes = require("./routes/appointmentRoutes");
 
 const app = express();
 app.use(express.json());
@@ -27,6 +28,8 @@ app.use("/api/chat-windows", chatWindowRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/auth/doctors", doctorAuthRoutes);
+app.use("/api/appointments", appointmentRoutes);
+
 
 
 console.log("JWT_SECRET:", process.env.JWT_SECRET);
