@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Trash, MessageSquare, PlusCircle, Send, Calendar } from "lucide-react";
+import { Trash, MessageSquare, PlusCircle, Send, Calendar, Info } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Navbar } from "@/components/navbar";
 import { useRouter } from "next/navigation";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 import { getUserFromLocalStorage } from "./services/userService";
 import { fetchChatWindows, createNewWindow } from "./services/chatWindowService";
@@ -208,7 +209,7 @@ export default function ChatPage() {
   const handleAppointment = (doctor: { _id: string }) => {
     router.push(`/bookappointment?doctorId=${doctor._id}`);
   };
-  
+
 
 
   const extractSymptoms = (message: string) => {
@@ -379,7 +380,7 @@ export default function ChatPage() {
                               <button
                                 className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 transition"
                                 onClick={() => handleAppointment(doctor)} // ✅ Pass doctor object here
-                                >
+                              >
                                 <Calendar size={20} />
                                 <span className="hidden sm:inline">Book Appointment</span>
                               </button>
@@ -400,15 +401,26 @@ export default function ChatPage() {
           <Separator />
 
           {/* Input Field */}
-          <form onSubmit={handleManualSubmit} className="flex w-full space-x-2 p-2">
-            <Input value={input} onChange={handleInputChange} placeholder="Type your message..." disabled={isLoading} />
-            <Button type="submit" size="icon" disabled={isLoading}>
-              <Send className="h-4 w-4" />
-            </Button>
-          </form>
+          <TooltipProvider>
+            <form onSubmit={handleManualSubmit} className="flex w-full space-x-2 p-2 items-center">
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="h-5 w-5 text-gray-500 cursor-pointer" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="w-full max-w-lg mx-auto p-2" >
+                    I am a medical chatbot where I will suggest doctors according to your symptoms,
+                    but I won’t be suggesting based on medical conditions.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+              <Input value={input} onChange={handleInputChange} placeholder="Type your message..." disabled={isLoading} />
+              <Button type="submit" size="icon" disabled={isLoading}>
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          </TooltipProvider>
         </div>
-
-
       </div>
     </div>
 
