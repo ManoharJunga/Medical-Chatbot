@@ -85,37 +85,7 @@ export default function AppointmentsPage() {
 
         <TabsContent value="calendar" className="space-y-2">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-            <Card className="md:col-span-1">
-              <CardHeader className="p-3">
-                <CardTitle className="text-sm">Calendar</CardTitle>
-                <CardDescription className="text-xs">Select a date to view appointments</CardDescription>
-              </CardHeader>
-              <CardContent className="p-3">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  className="rounded-md border w-full"
-                />
-                <div className="mt-3 space-y-2">
-                  <div className="text-xs font-medium">Filter By</div>
-                  <Select defaultValue="all">
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Appointments</SelectItem>
-                      <SelectItem value="video">Video Consultations</SelectItem>
-                      <SelectItem value="in-person">In-Person Visits</SelectItem>
-                      <SelectItem value="emergency">Emergency Cases</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" className="w-full text-xs h-8 mt-2">
-                    <Filter className="mr-1 h-3 w-3" /> Apply Filters
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+
 
             <Card className="md:col-span-3">
               <CardHeader className="p-3">

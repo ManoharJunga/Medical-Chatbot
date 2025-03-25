@@ -227,7 +227,7 @@ export default function ChatPage() {
       "excessive thirst", "frequent urination", "dry mouth", "chest tightness", "breathlessness",
       "bruising easily", "excessive sweating", "hair loss", "hot flashes", "yellowing of skin",
       "blood in stool", "blood in urine", "fainting", "severe cramps", "difficulty concentrating",
-      "acid reflux", "heartburn", "restlessness", "kidney pain"
+      "acid reflux", "heartburn", "restlessness", "kidney pain", "cold"
     ];
 
     return symptomList.filter(symptom => message.toLowerCase().includes(symptom));

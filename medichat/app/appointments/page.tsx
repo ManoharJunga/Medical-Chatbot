@@ -46,22 +46,32 @@ const Appointments = () => {
     useEffect(() => {
         const fetchAppointments = async () => {
             if (!user) return;
-
+    
             try {
                 const res = await axios.get(`http://localhost:5001/api/appointments/user/${user.id}`);
                 if (res.data.success) {
                     setAppointments(res.data.appointments);
+    
                     const now = new Date();
-                    setUpcomingAppointments(res.data.appointments.filter((appt: Appointment) => new Date(appt.date) > now));
-                    setPastAppointments(res.data.appointments.filter((appt: Appointment) => new Date(appt.date) < now));
+                    const upcoming = res.data.appointments
+                        .filter((appt: Appointment) => new Date(appt.date) > now)
+                        .sort((a: Appointment, b: Appointment) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Sort in ascending order
+    
+                    const past = res.data.appointments
+                        .filter((appt: Appointment) => new Date(appt.date) < now)
+                        .sort((a: Appointment, b: Appointment) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sort past appointments in descending order
+    
+                    setUpcomingAppointments(upcoming);
+                    setPastAppointments(past);
                 }
             } catch (error) {
                 console.error("Error fetching appointments:", error);
             }
         };
-
+    
         fetchAppointments();
     }, [user]);
+    
 
     return (
         <div className="flex min-h-screen flex-col">
@@ -89,7 +99,7 @@ const Appointments = () => {
                                                 <Badge
                                                     variant={appt.status === "pending" ? "default" : "outline"}
                                                     className={`${appt.status === "confirmed" ? "bg-green-500" :
-                                                            appt.status === "cancelled" ? "bg-red-500" : ""
+                                                        appt.status === "cancelled" ? "bg-red-500" : ""
                                                         }`}
                                                 >
                                                     {appt.status}
@@ -100,7 +110,13 @@ const Appointments = () => {
                                         <CardContent className=" grid grid-cols-1 md:grid-cols-3 gap-2">
                                             <div className="flex items-center text-gray-600">
                                                 <Calendar className="h-4 w-4 mr-2" />
-                                                <span>{new Date(appt.date).toLocaleDateString()}</span>
+                                                <span>
+                                                    {new Date(appt.date).toLocaleDateString("en-GB", {
+                                                        day: "2-digit",
+                                                        month: "2-digit",
+                                                        year: "2-digit",
+                                                    })}
+                                                </span>
                                             </div>
                                             <div className="flex items-center text-gray-600">
                                                 <Clock className="h-4 w-4 mr-2" />
@@ -141,7 +157,7 @@ const Appointments = () => {
                                                 <Badge
                                                     variant={appt.status === "pending" ? "default" : "outline"}
                                                     className={`${appt.status === "confirmed" ? "bg-green-500" :
-                                                            appt.status === "cancelled" ? "bg-red-500" : ""
+                                                        appt.status === "cancelled" ? "bg-red-500" : ""
                                                         }`}
                                                 >
                                                     {appt.status}

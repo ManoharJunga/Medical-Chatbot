@@ -59,7 +59,7 @@ const BookAppointment = () => {
       });
 
       alert("Appointment booked successfully!");
-      router.push("/");
+      router.push("/appointments");
     } catch (error) {
       console.error("Failed to book appointment:", error.response?.data || error.message);
       alert("Failed to book appointment. Please try again.");
