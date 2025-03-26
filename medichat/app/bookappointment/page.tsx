@@ -19,6 +19,8 @@ const BookAppointment = () => {
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [date, setDate] = useState("");
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -43,9 +45,19 @@ const BookAppointment = () => {
       .catch((err) => console.error("Error fetching doctor:", err));
   }, [doctorId]);
 
+  // Fetch available time slots when the date is selected
+  useEffect(() => {
+    if (!doctorId || !date) return;
+
+    axios
+      .get(`http://localhost:5001/api/appointments/available-slots?doctorId=${doctorId}&date=${date}`)
+      .then((res) => setAvailableSlots(res.data.slots))
+      .catch((err) => console.error("Error fetching slots:", err));
+  }, [doctorId, date]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !selectedSlot) return;
 
     setLoading(true);
 
@@ -54,6 +66,7 @@ const BookAppointment = () => {
         doctor: doctorId,
         patient: user.id,
         date,
+        timeSlot: selectedSlot,
         status: "pending",
         notes,
       });
@@ -86,6 +99,26 @@ const BookAppointment = () => {
             required
           />
         </div>
+
+        {date && (
+          <div>
+            <label className="text-sm font-medium">Select Time Slot</label>
+            <select
+              className="w-full p-2 border rounded-md mt-1"
+              value={selectedSlot}
+              onChange={(e) => setSelectedSlot(e.target.value)}
+              required
+            >
+              <option value="">Select a time slot</option>
+              {availableSlots.map((slot) => (
+                <option key={slot} value={slot}>
+                  {slot}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="text-sm font-medium">Notes</label>
           <textarea
