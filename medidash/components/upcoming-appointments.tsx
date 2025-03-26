@@ -1,68 +1,77 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Clock, User, Video, MapPin } from "lucide-react"
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Clock, User, Video, MapPin } from "lucide-react";
 
-const appointments = [
-  {
-    id: 1,
-    patientName: "Jane Cooper",
-    patientAvatar: "/placeholder.svg?height=40&width=40",
-    patientInitials: "JC",
-    time: "9:00 AM - 9:30 AM",
-    type: "Video Call",
-    details: "Routine Check-up",
-    isOnline: true,
-  },
-  {
-    id: 2,
-    patientName: "John Smith",
-    patientAvatar: "/placeholder.svg?height=40&width=40",
-    patientInitials: "JS",
-    time: "10:15 AM - 10:45 AM",
-    type: "In-Person",
-    details: "Blood Pressure Follow-up",
-    isOnline: false,
-  },
-  {
-    id: 3,
-    patientName: "Emily Johnson",
-    patientAvatar: "/placeholder.svg?height=40&width=40",
-    patientInitials: "EJ",
-    time: "11:30 AM - 12:15 PM",
-    type: "Video Call",
-    details: "Medication Review",
-    isOnline: true,
-  },
-  {
-    id: 4,
-    patientName: "Michael Davis",
-    patientAvatar: "/placeholder.svg?height=40&width=40",
-    patientInitials: "MD",
-    time: "2:00 PM - 2:30 PM",
-    type: "In-Person",
-    details: "Post-surgery Check-up",
-    isOnline: false,
-  },
-]
+export function UpcomingAppointments({ paramDoctorId }: { paramDoctorId?: string }) {
+  const [doctorId, setDoctorId] = useState<string | null>(null);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-export function UpcomingAppointments() {
+  // Fetch doctorId from local storage or URL param
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const storedDoctor = localStorage.getItem("doctor");
+    const doctor = storedDoctor ? JSON.parse(storedDoctor) : null;
+    const finalDoctorId = paramDoctorId || doctor?._id || null;
+
+    setDoctorId(finalDoctorId);
+  }, [paramDoctorId]);
+
+  // Fetch Appointments
+  useEffect(() => {
+    async function fetchAppointments() {
+      if (!doctorId) return;
+
+      try {
+        const response = await axios.get(`http://localhost:5001/api/appointments?doctorId=${doctorId}`);
+
+        if (response.data.success && Array.isArray(response.data.appointments)) {
+          // Filter out appointments with status "pending"
+          const validAppointments = response.data.appointments.filter(
+            (appointment) => appointment.status !== "pending"
+          );
+
+          setAppointments(validAppointments);
+        } else {
+          setAppointments([]);
+        }
+      } catch (err) {
+        console.error("Error fetching appointments:", err);
+        setError("Failed to fetch appointments");
+        setAppointments([]); // Reset to prevent map() errors
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchAppointments();
+  }, [doctorId]);
+
+  if (loading) return <p>Loading appointments...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
+  if (appointments.length === 0) return <p>No upcoming appointments.</p>;
+
   return (
     <div className="space-y-4">
       {appointments.map((appointment) => (
-        <Card key={appointment.id}>
+        <Card key={appointment._id}>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-12 w-12">
-                <AvatarImage src={appointment.patientAvatar} alt={appointment.patientName} />
-                <AvatarFallback>{appointment.patientInitials}</AvatarFallback>
+                <AvatarImage src="/placeholder.svg?height=40&width=40" alt={appointment.patient.name} />
+                <AvatarFallback>{appointment.patient.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold">{appointment.patientName}</h3>
-                  <Badge variant={appointment.isOnline ? "default" : "outline"}>
-                    {appointment.isOnline ? (
+                  <h3 className="font-semibold">{appointment.patient.name}</h3>
+                  <Badge variant={appointment.type === "Video Call" ? "default" : "outline"}>
+                    {appointment.type === "Video Call" ? (
                       <>
                         <Video className="mr-1 h-3 w-3" /> Online
                       </>
@@ -75,9 +84,9 @@ export function UpcomingAppointments() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  <span>{appointment.time}</span>
+                  <span>{appointment.timeSlot}</span>
                   <span>•</span>
-                  <span>{appointment.details}</span>
+                  <span>{appointment.notes}</span>
                 </div>
               </div>
               <div className="ml-auto flex gap-2">
@@ -85,7 +94,7 @@ export function UpcomingAppointments() {
                   <User className="mr-2 h-4 w-4" />
                   View Profile
                 </Button>
-                {appointment.isOnline && (
+                {appointment.type === "Video Call" && (
                   <Button size="sm">
                     <Video className="mr-2 h-4 w-4" />
                     Start Call
@@ -97,6 +106,5 @@ export function UpcomingAppointments() {
         </Card>
       ))}
     </div>
-  )
+  );
 }
-

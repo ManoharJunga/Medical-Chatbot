@@ -24,6 +24,7 @@ export function AppointmentCalendarView() {
   const { doctorId: paramDoctorId } = useParams();
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [timeSlots, setTimeSlots] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0] // Default to today’s date
@@ -40,51 +41,44 @@ export function AppointmentCalendarView() {
     }
   }, [paramDoctorId]);
 
-  // Fetch Appointments when doctorId or selectedDate changes
+  // Fetch Available Slots & Appointments
   useEffect(() => {
-    async function fetchAppointments() {
+    async function fetchAppointmentsAndSlots() {
       if (!doctorId) {
         console.log("No doctorId available, skipping fetch.");
         return;
       }
-      console.log("Fetching appointments for Doctor ID:", doctorId);
-
+  
+      console.log("Fetching appointments & available slots for Doctor ID:", doctorId);
+  
       try {
         const response = await axios.get(
-          `http://localhost:5001/api/appointments/doctor/${doctorId}`
+          `http://localhost:5001/api/appointments/available-slots?doctorId=${doctorId}&date=${selectedDate}`
         );
         const data = response.data;
         console.log("API Response:", data);
-
-        if (data.success && Array.isArray(data.appointments)) {
-          setAppointments(data.appointments);
-          console.log("Appointments Updated:", data.appointments);
+  
+        if (data.success) {
+          setTimeSlots(data.slots || []); // ✅ Store available slots
+          setAppointments(data.bookedAppointments || []); // ✅ Store booked appointments
+          console.log("Available Slots Updated:", data.slots);
+          console.log("Booked Appointments Updated:", data.bookedAppointments);
         } else {
+          setTimeSlots([]);
           setAppointments([]);
-          console.log("Appointments List is Empty.");
+          console.log("No available slots or booked appointments.");
         }
       } catch (error) {
-        console.error("Error fetching appointments:", error);
+        console.error("Error fetching appointments and slots:", error);
+        setTimeSlots([]);
         setAppointments([]);
       }
     }
-    fetchAppointments();
-  }, [doctorId, selectedDate]); // Trigger fetch when doctorId or selectedDate changes
-
-  // Initialize Time Slots
-  useEffect(() => {
-    setTimeSlots([
-      "09:00 AM",
-      "10:00 AM",
-      "11:00 AM",
-      "12:00 PM",
-      "02:00 PM",
-      "03:00 PM",
-      "04:00 PM",
-      "05:00 PM",
-    ]);
-    console.log("Time Slots Initialized");
-  }, []);
+  
+    fetchAppointmentsAndSlots();
+  }, [doctorId, selectedDate]);
+  
+  
 
   function formatTime(dateTime: string): string {
     const date = new Date(dateTime);
@@ -95,19 +89,10 @@ export function AppointmentCalendarView() {
     return `${hours}:${minutes < 10 ? "0" + minutes : minutes} ${ampm}`;
   }
 
-  function filterAppointmentsByDate(date: string) {
-    console.log("Filtering Appointments for Date:", date);
-    const filteredAppointments = appointments.filter(
-      (appointment) => new Date(appointment.date).toISOString().split("T")[0] === date
-    );
-    console.log("Filtered Appointments:", filteredAppointments);
-    return filteredAppointments;
-  }
-
   return (
     <div className="flex w-full h-screen p-4 gap-4">
       {/* Sidebar Calendar */}
-      <div className="w-1/4 bg-gray-100 p-4 rounded-lg shadow-md">
+      <div className="bg-gray-100 p-4 rounded-lg shadow-md">
         <h3 className="text-lg font-semibold mb-2">Calendar</h3>
         <p className="text-sm text-gray-600 mb-4">Select a date to view appointments</p>
         <div className="bg-white p-3 rounded-lg">
@@ -125,44 +110,45 @@ export function AppointmentCalendarView() {
 
       {/* Appointment List */}
       <div className="w-3/4 bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-xl font-semibold mb-4">Appointments</h2>
-        {doctorId ? (
-          <div className="space-y-3">
-            {timeSlots.map((timeSlot) => {
-              const appointmentsOnSelectedDate = filterAppointmentsByDate(selectedDate);
-              const appointmentsInSlot = appointmentsOnSelectedDate.filter(
-                (appointment) => formatTime(appointment.date) === timeSlot
-              );
+  <h2 className="text-xl font-semibold mb-4">Appointments</h2>
+  {doctorId ? (
+    <div className="space-y-3">
+      {timeSlots.map((timeSlot) => {
+        // Find appointments for the current time slot
+        const appointmentsInSlot = appointments.filter(
+          (appointment) => formatTime(appointment.date) === timeSlot
+        );
 
-              console.log(`Time Slot: ${timeSlot}`, appointmentsInSlot);
-
-              return (
-                <div key={timeSlot} className="flex items-start gap-4 py-2 border-t first:border-t-0">
-                  <div className="font-medium w-32">{timeSlot}</div>
-                  <div className="flex flex-col space-y-2">
-                    {appointmentsInSlot.length > 0 ? (
-                      appointmentsInSlot.map((appointment) => (
-                        <div key={appointment._id} className="p-2 bg-blue-100 rounded">
-                          <p>
-                            <strong>Patient:</strong> {appointment.patient.name}
-                          </p>
-                          <p>
-                            <strong>Notes:</strong> {appointment.notes}
-                          </p>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-gray-500">No appointments</div>
-                    )}
+        return (
+          <div key={timeSlot} className="flex items-start gap-4 py-2 border-t first:border-t-0">
+            <div className="font-medium w-32">{timeSlot}</div>
+            <div className="flex flex-col space-y-2">
+              {appointmentsInSlot.length > 0 ? (
+                // ✅ Show booked appointments
+                appointmentsInSlot.map((appointment) => (
+                  <div key={appointment._id} className="p-2 bg-red-100 rounded">
+                    <p>
+                      <strong>Patient:</strong> {appointment.patient.name}
+                    </p>
+                    <p>
+                      <strong>Notes:</strong> {appointment.notes}
+                    </p>
                   </div>
-                </div>
-              );
-            })}
+                ))
+              ) : (
+                // ✅ Show available slots
+                <div className="p-2 bg-green-100 rounded text-gray-600">Available</div>
+              )}
+            </div>
           </div>
-        ) : (
-          <p className="text-red-500">Doctor ID is missing. Please log in again.</p>
-        )}
-      </div>
+        );
+      })}
+    </div>
+  ) : (
+    <p className="text-red-500">Doctor ID is missing. Please log in again.</p>
+  )}
+</div>
+
     </div>
   );
 }

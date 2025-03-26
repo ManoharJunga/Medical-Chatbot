@@ -17,6 +17,7 @@ import { EmergencyCases } from "@/components/emergency-cases";
 import { AppointmentCalendarView } from "@/components/appointment-calendar-view";
 
 export default function AppointmentsPage() {
+  const [upcomingCount, setUpcomingCount] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [doctor, setDoctor] = useState(null);
   const [appointments, setAppointments] = useState([]);
@@ -71,8 +72,11 @@ export default function AppointmentsPage() {
           </TabsTrigger>
           <TabsTrigger value="upcoming">
             <ChevronRight className="mr-1 h-4 w-4" /> Upcoming
-            <Badge variant="outline" className="ml-1 text-xs">{appointments.length}</Badge>
+            {upcomingCount > 0 && (
+              <Badge variant="outline" className="ml-1 text-xs">{upcomingCount}</Badge>
+            )}
           </TabsTrigger>
+
           <TabsTrigger value="requests">
             <ChevronLeft className="mr-1 h-4 w-4" /> Requests
             <Badge variant="outline" className="ml-1 text-xs">8</Badge>
@@ -100,7 +104,7 @@ export default function AppointmentsPage() {
         </TabsContent>
 
         <TabsContent value="upcoming" className="space-y-3">
-          <UpcomingAppointments appointments={appointments} />
+        <UpcomingAppointments setUpcomingCount={setUpcomingCount} />
         </TabsContent>
 
         <TabsContent value="requests" className="space-y-3">
