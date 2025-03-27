@@ -51,10 +51,15 @@ exports.getAppointmentById = async (req, res) => {
 // Get appointments by Doctor ID
 exports.getAppointmentsByDoctor = async (req, res) => {
   try {
-    const appointments = await Appointment.find({ doctor: req.params.doctorId }).populate("doctor").populate("patient");
-    
+    const appointments = await Appointment.find({ 
+      doctor: req.params.doctorId, 
+      status: { $ne: "confirmed" }  // Exclude confirmed appointments
+    })
+    .populate("doctor")
+    .populate("patient");
+
     if (!appointments.length) {
-      return res.status(404).json({ success: false, message: "No appointments found for this doctor" });
+      return res.status(404).json({ success: false, message: "No pending appointments found for this doctor" });
     }
 
     res.status(200).json({ success: true, appointments });
@@ -63,26 +68,37 @@ exports.getAppointmentsByDoctor = async (req, res) => {
   }
 };
 
-// Update an appointment
-exports.updateAppointment = async (req, res) => {
-  try {
-    const { doctor, patient, date, status, notes } = req.body;
 
+// Update an appointment
+exports.updateAppointmentStatus = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const { status } = req.body;
+
+    // Validate status
+    if (!["confirmed", "cancelled"].includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status value" });
+    }
+
+    // Find and update appointment
     const appointment = await Appointment.findByIdAndUpdate(
-      req.params.id,
-      { doctor, patient, date, status, notes },
-      { new: true, runValidators: true }
+      appointmentId,
+      { status },
+      { new: true }
     );
 
     if (!appointment) {
       return res.status(404).json({ success: false, message: "Appointment not found" });
     }
 
-    res.status(200).json({ success: true, message: "Appointment updated successfully", appointment });
+    res.status(200).json({ success: true, message: `Appointment updated to ${status}`, appointment });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error updating appointment", error: error.message });
+    console.error("Error updating appointment status:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
+
+
 
 // Delete an appointment
 exports.deleteAppointment = async (req, res) => {
