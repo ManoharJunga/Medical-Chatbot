@@ -91,7 +91,7 @@ export default function AppointmentsPage() {
         </TabsList>
 
         <TabsContent value="calendar" className="space-y-2">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
 
 
             <Card className="md:col-span-3">
