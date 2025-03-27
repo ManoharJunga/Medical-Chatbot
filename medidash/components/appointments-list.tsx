@@ -115,7 +115,7 @@ export function AppointmentsList({ paramDoctorId }: AppointmentsListProps) {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  <span>Requested: {new Date(date).toLocaleDateString()}</span>
+                  <span>Requested: {new Date(date).toLocaleDateString("en-GB")}</span>
                   <span>•</span>
                   <span className="font-medium">Time Slot: {timeSlot}</span>
                 </div>

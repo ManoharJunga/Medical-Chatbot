@@ -6,9 +6,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, Video, MapPin } from "lucide-react";
 
+// Define the Appointment Type
+interface Appointment {
+  _id: string;
+  patient: {
+    name: string;
+  };
+  type: string;
+  date: string; // Date stored as a string (ISO format)
+  timeSlot: string;
+  notes: string;
+  status: string;
+}
+
 export function UpcomingAppointments({ paramDoctorId }: { paramDoctorId?: string }) {
   const [doctorId, setDoctorId] = useState<string | null>(null);
-  const [appointments, setAppointments] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,13 +42,21 @@ export function UpcomingAppointments({ paramDoctorId }: { paramDoctorId?: string
       if (!doctorId) return;
 
       try {
-        const response = await axios.get(`http://localhost:5001/api/appointments?doctorId=${doctorId}`);
+        const response = await axios.get<{ success: boolean; appointments: Appointment[] }>(
+          `http://localhost:5001/api/appointments?doctorId=${doctorId}`
+        );
 
         if (response.data.success && Array.isArray(response.data.appointments)) {
-          // Filter out appointments with status "pending"
-          const validAppointments = response.data.appointments.filter(
-            (appointment) => appointment.status !== "pending"
-          );
+          const today = new Date();
+          today.setHours(0, 0, 0, 0); // Normalize to start of the day
+
+          const validAppointments = response.data.appointments
+            .filter((appointment) => appointment.status !== "pending")
+            .filter((appointment) => {
+              const appointmentDate = new Date(appointment.date);
+              appointmentDate.setHours(0, 0, 0, 0);
+              return appointmentDate >= today; // Only today's and future appointments
+            });
 
           setAppointments(validAppointments);
         } else {
@@ -44,7 +65,7 @@ export function UpcomingAppointments({ paramDoctorId }: { paramDoctorId?: string
       } catch (err) {
         console.error("Error fetching appointments:", err);
         setError("Failed to fetch appointments");
-        setAppointments([]); // Reset to prevent map() errors
+        setAppointments([]);
       } finally {
         setLoading(false);
       }
@@ -84,6 +105,8 @@ export function UpcomingAppointments({ paramDoctorId }: { paramDoctorId?: string
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-3 w-3" />
+                  <span>Upcoming: {new Date(appointment.date).toLocaleDateString("en-GB")}</span>
+                  <span>•</span>
                   <span>{appointment.timeSlot}</span>
                   <span>•</span>
                   <span>{appointment.notes}</span>
