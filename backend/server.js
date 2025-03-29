@@ -32,6 +32,7 @@ app.use("/api/appointments", appointmentRoutes);
 
 
 
+
 console.log("JWT_SECRET:", process.env.JWT_SECRET);
 
 const PORT = 5001;
