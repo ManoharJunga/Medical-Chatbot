@@ -45,8 +45,8 @@ exports.getPrescriptionsByDoctor = async (req, res) => {
 // Get all prescriptions of a patient (Ensures access for doctors only)
 exports.getPrescriptionsByPatient = async (req, res) => {
   try {
-    const { doctorId, patientId } = req.params;
-    const prescriptions = await Prescription.find({ patient: patientId, doctor: doctorId }).populate("doctor");
+    const { patientId } = req.params;
+    const prescriptions = await Prescription.find({ patient: patientId }).populate("doctor");
 
     res.json(prescriptions);
   } catch (error) {

@@ -53,6 +53,8 @@ export function Navbar() {
               <>
                 <Link href="/chat" className="text-gray-700 hover:text-primary font-medium">Chatbot</Link>
                 <Link href="/appointments" className="text-gray-700 hover:text-primary font-medium">Appointments</Link>
+                <Link href="/prescriptions" className="text-gray-700 hover:text-primary font-medium">Prescriptions</Link>
+
 
               </>
             )}
@@ -105,6 +107,8 @@ export function Navbar() {
               <>
                 <Link href="/chat" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Chatbot</Link>
                 <Link href="/appointments" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Appointments</Link>
+                <Link href="/prescriptions" className="text-gray-700 hover:text-primary font-medium" onClick={() => setIsMenuOpen(false)}>Prescriptions</Link>
+
               </>
             )}
 

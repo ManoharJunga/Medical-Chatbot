@@ -98,8 +98,8 @@ export function PrescriptionForm() {
     }
 
     const prescriptionData = {
-      patientId: selectedPatient,
-      doctorId: doctorId,
+      patient: selectedPatient,
+      doctor: doctorId,
       medications: medications.map(({ id, ...med }) => med),
       instructions,
     }
