@@ -1,12 +1,14 @@
-import { Suspense } from "react"
-import { FileDown, FilePlus, Printer, Search, Send } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { PrescriptionForm } from "@/components/prescription-form"
-import { Skeleton } from "@/components/ui/skeleton"
+"use client"
+import { Suspense, useEffect, useState } from "react";
+import { FileDown, FilePlus, Printer, Search, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PrescriptionForm } from "@/components/prescription-form";
+import { Skeleton } from "@/components/ui/skeleton";
+import axios from "axios";
 
 export default function PrescriptionsPage() {
   return (
@@ -40,57 +42,27 @@ export default function PrescriptionsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function PrescriptionHistory() {
-  const prescriptions = [
-    {
-      id: 1,
-      patientName: "Jane Cooper",
-      patientAvatar: "/placeholder.svg?height=40&width=40",
-      patientInitials: "JC",
-      medications: "Amlodipine 5mg, Hydrochlorothiazide 12.5mg",
-      date: "Today",
-      status: "Sent to pharmacy",
-    },
-    {
-      id: 2,
-      patientName: "John Smith",
-      patientAvatar: "/placeholder.svg?height=40&width=40",
-      patientInitials: "JS",
-      medications: "Metformin 500mg, Glipizide 5mg",
-      date: "Yesterday",
-      status: "Collected",
-    },
-    {
-      id: 3,
-      patientName: "Emily Johnson",
-      patientAvatar: "/placeholder.svg?height=40&width=40",
-      patientInitials: "EJ",
-      medications: "Sumatriptan 50mg, Ibuprofen 600mg",
-      date: "3 days ago",
-      status: "Sent to patient",
-    },
-    {
-      id: 4,
-      patientName: "Michael Davis",
-      patientAvatar: "/placeholder.svg?height=40&width=40",
-      patientInitials: "MD",
-      medications: "Cephalexin 500mg, Acetaminophen 500mg",
-      date: "1 week ago",
-      status: "Collected",
-    },
-    {
-      id: 5,
-      patientName: "Sarah Wilson",
-      patientAvatar: "/placeholder.svg?height=40&width=40",
-      patientInitials: "SW",
-      medications: "Diclofenac Sodium 75mg, Cyclobenzaprine 10mg",
-      date: "2 weeks ago",
-      status: "Collected",
-    },
-  ]
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    axios
+      .get("http://localhost:5001/api/prescriptions/doctor/67dd18cf5505a60ed069db7e")
+      .then((response) => {
+        setPrescriptions(response.data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("Error fetching prescriptions:", error);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <PrescriptionTableSkeleton />;
 
   return (
     <Card>
@@ -110,20 +82,21 @@ function PrescriptionHistory() {
           </TableHeader>
           <TableBody>
             {prescriptions.map((prescription) => (
-              <TableRow key={prescription.id}>
+              <TableRow key={prescription._id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={prescription.patientAvatar} alt={prescription.patientName} />
-                      <AvatarFallback>{prescription.patientInitials}</AvatarFallback>
+                      <AvatarFallback>{prescription.patient.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <div className="font-medium">{prescription.patientName}</div>
+                    <div className="font-medium">{prescription.patient.name}</div>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="text-sm">{prescription.medications}</div>
+                  <div className="text-sm">
+                    {prescription.medications.map((med) => `${med.name} ${med.dosage}`).join(", ")}
+                  </div>
                 </TableCell>
-                <TableCell>{prescription.date}</TableCell>
+                <TableCell>{new Date(prescription.issuedDate).toLocaleDateString()}</TableCell>
                 <TableCell>{prescription.status}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
@@ -147,7 +120,7 @@ function PrescriptionHistory() {
         </Table>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function PrescriptionTableSkeleton() {
@@ -160,21 +133,9 @@ function PrescriptionTableSkeleton() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>
-                <Skeleton className="h-4 w-16" />
-              </TableHead>
-              <TableHead>
-                <Skeleton className="h-4 w-16" />
-              </TableHead>
-              <TableHead>
-                <Skeleton className="h-4 w-16" />
-              </TableHead>
-              <TableHead>
-                <Skeleton className="h-4 w-16" />
-              </TableHead>
-              <TableHead>
-                <Skeleton className="h-4 w-16" />
-              </TableHead>
+              {Array(5).fill(null).map((_, index) => (
+                <TableHead key={index}><Skeleton className="h-4 w-16" /></TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -186,20 +147,14 @@ function PrescriptionTableSkeleton() {
                     <Skeleton className="h-4 w-32" />
                   </div>
                 </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-48" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-20" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-24" />
-                </TableCell>
+                <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <Skeleton className="h-8 w-8 rounded-md" />
-                    <Skeleton className="h-8 w-8 rounded-md" />
-                    <Skeleton className="h-8 w-8 rounded-md" />
+                    {Array(3).fill(null).map((_, index) => (
+                      <Skeleton key={index} className="h-8 w-8 rounded-md" />
+                    ))}
                   </div>
                 </TableCell>
               </TableRow>
@@ -208,6 +163,5 @@ function PrescriptionTableSkeleton() {
         </Table>
       </CardContent>
     </Card>
-  )
+  );
 }
-
