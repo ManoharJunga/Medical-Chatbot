@@ -40,7 +40,7 @@ export default function AppointmentsPage() {
 
   const fetchAppointments = async (doctorId: string) => {
     try {
-      const response = await axios.get(`http://localhost:5001/api/appointments/doctor/${doctorId}`);
+      const response = await axios.get(`http://localhost:5001/api/appointments/doctor/${doctorId}/approved`);
       setAppointments(response.data);
     } catch (error) {
       console.error("Error fetching appointments:", error);
@@ -79,10 +79,10 @@ export default function AppointmentsPage() {
           </TabsTrigger>
 
           <TabsTrigger value="requests">
-          <ChevronLeft className="mr-1 h-4 w-4" /> Requests
-  {requestCount > 0 && (
-    <Badge variant="outline" className="ml-1 text-xs">{requestCount}</Badge>
-  )}
+            <ChevronLeft className="mr-1 h-4 w-4" /> Requests
+            {requestCount > 0 && (
+              <Badge variant="outline" className="ml-1 text-xs">{requestCount}</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="emergency">
             <Badge variant="destructive" className="mr-1 h-2 w-2 p-0 rounded-full" /> Emergency
@@ -107,11 +107,11 @@ export default function AppointmentsPage() {
         </TabsContent>
 
         <TabsContent value="upcoming" className="space-y-3">
-        <UpcomingAppointments setUpcomingCount={setUpcomingCount} />
+          <UpcomingAppointments setUpcomingCount={setUpcomingCount} />
         </TabsContent>
 
         <TabsContent value="requests" className="space-y-3">
-        <AppointmentsList setRequestCount={setRequestCount} />
+          <AppointmentsList setRequestCount={setRequestCount} />
         </TabsContent>
 
         <TabsContent value="emergency" className="space-y-3">
