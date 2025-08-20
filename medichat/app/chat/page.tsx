@@ -182,10 +182,10 @@ export default function ChatPage() {
         }
 
         // Ensure doctors array exists in the response
-        if (!doctorData.doctors || doctorData.doctors.length === 0) {
-          console.warn("No doctors found in API response."); // ✅ Log empty response
+        if (!doctorData || doctorData.length === 0) {
+          console.warn("No doctors found in API response.");
         } else {
-          console.log("Doctors fetched successfully:", doctorData.doctors); // ✅ Log doctor list
+          console.log("Doctors fetched successfully:", doctorData);
         }
 
         // Display bot message + doctor recommendations
@@ -194,7 +194,7 @@ export default function ChatPage() {
           {
             role: "bot",
             content: "Based on your symptoms, here are some recommended doctors:",
-            doctors: doctorData.doctors || [] // Ensures it's always an array
+            doctors: doctorData // ✅ use array directly
           }
         ]);
       }
@@ -227,7 +227,7 @@ export default function ChatPage() {
       "excessive thirst", "frequent urination", "dry mouth", "chest tightness", "breathlessness",
       "bruising easily", "excessive sweating", "hair loss", "hot flashes", "yellowing of skin",
       "blood in stool", "blood in urine", "fainting", "severe cramps", "difficulty concentrating",
-      "acid reflux", "heartburn", "restlessness", "kidney pain", "cold"
+      "acid reflux", "heartburn", "restlessness", "kidney pain", "cold", "Diabetes",
     ];
 
     return symptomList.filter(symptom => message.toLowerCase().includes(symptom));
