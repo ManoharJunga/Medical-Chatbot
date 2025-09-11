@@ -52,34 +52,42 @@ export default function RegisterPage() {
       return;
     }
 
+    // 🔍 Log the payload before sending
+    const payload = {
+      name: `${formData.firstName} ${formData.lastName}`,
+      email: formData.email,
+      password: formData.password,
+      specialty: formData.specialty,
+      location: formData.location,
+      contact: formData.contact,
+    };
+    console.log("Submitting doctor registration payload:", payload);
+
     setIsLoading(true);
 
     try {
       const response = await fetch("http://localhost:5001/api/auth/doctors/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          password: formData.password,
-          specialty: formData.specialty,
-          location: formData.location,
-          contact: formData.contact,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
+      console.log("Backend response:", data); // 👈 also log the response
+
       if (!response.ok) throw new Error(data.message || "Registration failed");
 
       setSuccess("Doctor registered successfully! OTP sent for verification.");
       localStorage.setItem("registeredEmail", formData.email);
       setTimeout(() => router.push("/otp-verify"), 2000);
     } catch (err: any) {
+      console.error("Error during registration:", err);
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">

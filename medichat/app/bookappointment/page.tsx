@@ -51,8 +51,14 @@ const BookAppointment = () => {
 
     axios
       .get(`http://localhost:5001/api/appointments/available-slots?doctorId=${doctorId}&date=${date}`)
-      .then((res) => setAvailableSlots(res.data.slots))
-      .catch((err) => console.error("Error fetching slots:", err));
+      .then((res) => {
+        console.log("Slots API response:", res.data);
+        setAvailableSlots(res.data.availableSlots || []); // ✅ fix here
+      })
+      .catch((err) => {
+        console.error("Error fetching slots:", err);
+        setAvailableSlots([]);
+      });
   }, [doctorId, date]);
 
   const handleSubmit = async (e: React.FormEvent) => {
