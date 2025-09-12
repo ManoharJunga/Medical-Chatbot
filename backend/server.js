@@ -12,6 +12,7 @@ const doctorRoutes = require("./routes/doctorRoutes");
 const doctorAuthRoutes = require("./routes/doctorAuth.routes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 
 const app = express();
@@ -33,6 +34,7 @@ app.use("/api/doctors", doctorRoutes);
 app.use("/api/auth/doctors", doctorAuthRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/ai", aiRoutes);
 
 
 
