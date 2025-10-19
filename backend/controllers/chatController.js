@@ -27,17 +27,48 @@ const processMessage = async (req, res) => {
         conversationParts.push({ text: `User: ${message}` });
 
         const prompt = `
-You are MedBot, a friendly and empathetic AI medical assistant.
+You are MedBot, a friendly, empathetic, and professional AI medical assistant.
 
-Your goal is to collect **enough information about the user's symptoms through natural conversation**.  
+Your primary goal is to **collect complete information about the user's symptoms** in a conversational and polite manner.
 
-👉 Follow this structured flow:
-1. Acknowledge what the user said.
-2. Ask 1 focused follow-up question at a time to learn more (e.g., duration, intensity, additional symptoms).
-3. Keep asking follow-up questions until you're confident you have a clear picture.
-4. **When you're confident you have enough info**, respond with a **summary sentence starting EXACTLY with**:
-   "Got it. Based on what you've shared, here's what I understand about your symptoms:"
-5. Do NOT give doctor suggestions or analysis until the summary is made.
+Follow these rules strictly:
+
+1. **Acknowledge the user’s input** in every message.  
+2. **Ask only one focused follow-up question at a time** to gather all details about symptoms, including:
+   - Type of symptom (pain, fever, cough, dizziness, etc.)
+   - Location of symptom
+   - Duration of symptom
+   - Intensity or severity (1–10 scale if applicable)
+   - Associated symptoms (shortness of breath, nausea, arm pain, etc.)
+   - Triggering or relieving factors
+3. Continue asking follow-ups until you have a **clear and complete picture** of all reported symptoms.
+4. **Once enough information is gathered**, provide a **summary sentence** starting exactly with:
+   "Got it. Based on what you've shared, here's what I understand about your symptoms:"  
+   - Include all key details: symptoms, location, duration, intensity, and any other relevant info.
+5. **Do NOT suggest doctors or treatments until the summary is made**.  
+6. **If the user asks about a doctor or says something like “suggest a doctor”**, reply politely:
+   "Sure! Please tell me more about what you are experiencing so that I can suggest the best doctor for you."
+7. After the summary, **trigger AI analysis** to generate:
+   - Identified symptoms  
+   - Summary  
+   - Possible conditions  
+   - Recommended actions  
+   - Recommended doctors (if symptoms indicate medical attention)
+8. **Maintain a polite, empathetic, human-like tone** throughout the conversation.
+9. Always ensure the summary is **clear and complete** so that downstream analysis can work reliably.
+
+Example Flow:
+
+User: "I have chest pain"  
+Bot: "Okay, I understand you have chest pain. Can you describe the type of pain – sharp, dull, or crushing?"  
+User: "Dull"  
+Bot: "Thank you. Where exactly in your chest is the pain?"  
+User: "Middle"  
+Bot: "Got it. Based on what you've shared, here's what I understand about your symptoms: You have had a dull chest pain in the middle of your chest for 4 days with a severity of 5/10."  
+
+User: "Can you suggest a doctor?"  
+Bot: "Sure! Please tell me more about what you are experiencing so that I can suggest the best doctor for you."  
+
 `;
 
         const apiKey = process.env.GOOGLE_API_KEY;
@@ -75,7 +106,7 @@ Your goal is to collect **enough information about the user's symptoms through n
         let finalResponse = { message: aiResponse, windowId };
 
         // 🩺 Trigger symptom analysis if bot gives summary
-        if (aiResponse.startsWith("Got it. Based on what you've shared")) {
+        if (/Got it\. Based on what you've shared/i.test(aiResponse.trim())) {
             const allMessages = chatHistory.map(c => c.userMessage).concat(message).join(". ");
 
             const mockReq = { body: { message: allMessages } };
@@ -100,9 +131,14 @@ Your goal is to collect **enough information about the user's symptoms through n
             // Update chat with aiAnalysis
             chat.aiAnalysis = analysisResult;
             await chat.save();
-
             finalResponse.analysis = analysisResult;
+
+            // ✅ Set chat window name using the first symptom only
+            const firstSymptom = analysisResult.identifiedSymptoms?.[0] || "Symptom Chat";
+            chatWindow.name = `Chat: ${firstSymptom}`;
+            await chatWindow.save();
         }
+
 
         res.status(200).json(finalResponse);
 
@@ -113,28 +149,29 @@ Your goal is to collect **enough information about the user's symptoms through n
     }
 };
 
-
 // 🔹 Get Full Chat History for a Specific Chat Window
 const getChatHistory = async (req, res) => {
-  try {
-    const { windowId } = req.params;
-    if (!windowId) return res.status(400).json({ error: "Window ID is required" });
+    try {
+        const { windowId } = req.params;
 
-    const chatHistory = await Chat.find({ windowId })
-      .sort({ timestamp: 1 })
-      .select("userMessage botResponse aiAnalysis timestamp"); // <-- include aiAnalysis
+        if (!windowId) {
+            return res.status(400).json({ error: "Window ID is required" });
+        }
 
-    if (chatHistory.length === 0) {
-      return res.status(404).json({ error: "No chat history found" });
+        // Fetch chat messages for this window, sorted by timestamp
+        const chatHistory = await Chat.find({ windowId })
+            .sort({ timestamp: 1 })
+            .select("userMessage botResponse aiAnalysis timestamp"); // include aiAnalysis
+
+        // If no messages found, just return empty array (do not 404)
+        res.status(200).json(chatHistory || []);
+    } catch (error) {
+        console.error("Error fetching chat history:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
-
-    res.status(200).json(chatHistory);
-  } catch (error) {
-    console.error("Error fetching chat history:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
 };
 
+module.exports = { getChatHistory };
 
 
 // 🔹 Delete Chat History for a Chat Window

@@ -5,5 +5,7 @@ const chatWindowController = require("../controllers/chatWindowController");
 router.post("/new", chatWindowController.createChatWindow); 
 router.get("/user/:userId/windows", chatWindowController.getAllChatWindowsByUser);
 router.delete("/window/:windowId", chatWindowController.deleteChatWindow);
+router.patch("/window/:windowId", chatWindowController.updateChatWindowName);
+
 
 module.exports = router;

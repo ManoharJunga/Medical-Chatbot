@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge"
 import { getUserFromLocalStorage } from "./services/userService";
 import { fetchChatWindows, createNewWindow } from "./services/chatWindowService";
 import { fetchChatHistory, sendMessage } from "./services/chatService";
+import { Copy, ThumbsUp, ThumbsDown } from "lucide-react";
 
 
 interface ChatMessage {
@@ -55,6 +56,10 @@ export default function ChatPage() {
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const [isNewChat, setIsNewChat] = useState(false);
   const router = useRouter();
+  const [isBotTyping, setIsBotTyping] = useState(false);
+  const [pendingBotMessage, setPendingBotMessage] = useState<ChatMessage | null>(null);
+  const [feedbackState, setFeedbackState] = useState<{ [key: number]: "up" | "down" | null }>({});
+  const [copiedState, setCopiedState] = useState<{ [key: number]: boolean }>({});
 
 
 
@@ -128,73 +133,72 @@ export default function ChatPage() {
     console.log("Switched to window:", windowId);
   };
 
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
   };
 
   const handleManualSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || !user?.id) return;
 
-    const userId = user?.id;
-    const windowId = localStorage.getItem("activeWindow") || window.location.pathname;
-
-    if (!userId) {
-      console.log("User not found. Showing default bot response.");
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "bot",
-          content: "Based on your symptoms, here are some recommended doctors:",
-          doctors: []
-        }
-      ]);
-      return;
-    }
-
-    const userMessage = { role: "user" as const, content: input };
+    const userMessage: ChatMessage = { role: "user", content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
-    setIsLoading(true);
+    setIsBotTyping(true);
 
     try {
+      const windowId = activeWindow || "";
       const res = await fetch("http://localhost:5001/api/chat/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, windowId, message: input }),
+        body: JSON.stringify({ userId: user.id, windowId, message: input }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send message");
 
-      // Bot response
-      setMessages((prev) => [...prev, { role: "bot", content: data.message }]);
+      const botAnalysisMessage: ChatMessage = {
+        role: "bot",
+        content: data.message || "Analyzing...",
+        identifiedSymptoms: data.analysis?.identifiedSymptoms || [],
+        summary: data.analysis?.summary || "",
+        possibleConditions: data.analysis?.possibleConditions || [],
+        recommendedAction: data.analysis?.recommendedAction || "",
+        doctors: data.analysis?.doctors || [],
+        aiRendered: true,
+      };
 
-      // If backend attached analysis → show structured response
-      if (data.analysis) {
-        const { identifiedSymptoms, summary, possibleConditions, recommendedAction, doctors } = data.analysis;
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "bot",
-            content: "Based on your symptoms, here are some recommended doctors:",
-            identifiedSymptoms,
-            summary,
-            possibleConditions,
-            recommendedAction,
-            doctors
-          }
-        ]);
+      setPendingBotMessage(botAnalysisMessage);
+
+      // Update chat window name dynamically
+      const firstSymptom = data.analysis?.identifiedSymptoms?.[0] || "New Chat";
+      if (activeWindow) {
+        try {
+          await axios.patch(`http://localhost:5001/api/chat-windows/window/${activeWindow}`, {
+            name: `Chat: ${firstSymptom}`,
+          });
+          setWindows((prev) =>
+            prev.map((win) =>
+              win.windowId === activeWindow ? { ...win, name: `Chat: ${firstSymptom}` } : win
+            )
+          );
+        } catch (err) {
+          console.error("Failed to update window name:", err);
+        }
       }
 
-    } catch (error) {
-      console.error("Chat error:", error);
-      setMessages((prev) => [
-        ...prev,
-        { role: "bot", content: "Sorry, something went wrong. Please try again." }
-      ]);
-    } finally {
-      setIsLoading(false);
+      // simulate typing / analysis delay
+      setTimeout(() => {
+        setMessages((prev) => [...prev, botAnalysisMessage]);
+        setPendingBotMessage(null);
+        setIsBotTyping(false);
+      }, 2000);
+
+    } catch (err) {
+      console.error(err);
+      setMessages((prev) => [...prev, { role: "bot", content: "Something went wrong. Please try again." }]);
+      setPendingBotMessage(null);
+      setIsBotTyping(false);
     }
   };
 
@@ -206,28 +210,6 @@ export default function ChatPage() {
     router.push(`/bookappointment?doctorId=${doctor._id}`);
   };
 
-
-
-  const extractSymptoms = (message: string) => {
-    const symptomList = [
-      "migraine", "seizures", "dizziness", "fever", "cough", "pain", "fatigue", "anxiety",
-      "headache", "nausea", "vomiting", "shortness of breath", "chest pain", "sore throat",
-      "runny nose", "stuffy nose", "sneezing", "muscle pain", "joint pain", "back pain",
-      "abdominal pain", "diarrhea", "constipation", "bloating", "indigestion", "loss of appetite",
-      "weight loss", "weight gain", "insomnia", "night sweats", "chills", "skin rash",
-      "itching", "swelling", "redness", "burning sensation", "blurred vision", "double vision",
-      "sensitivity to light", "ringing in ears", "hearing loss", "difficulty swallowing",
-      "hoarseness", "palpitations", "high blood pressure", "low blood pressure", "weakness",
-      "numbness", "tingling", "loss of balance", "confusion", "memory loss", "depression",
-      "irritability", "mood swings", "hallucinations", "tremors", "cold hands and feet",
-      "excessive thirst", "frequent urination", "dry mouth", "chest tightness", "breathlessness",
-      "bruising easily", "excessive sweating", "hair loss", "hot flashes", "yellowing of skin",
-      "blood in stool", "blood in urine", "fainting", "severe cramps", "difficulty concentrating",
-      "acid reflux", "heartburn", "restlessness", "kidney pain", "cold", "Diabetes",
-    ];
-
-    return symptomList.filter(symptom => message.toLowerCase().includes(symptom));
-  };
 
 
   const quickActions = [
@@ -336,25 +318,77 @@ export default function ChatPage() {
 
           {/* Chat Messages */}
           <ScrollArea className="flex-1 overflow-y-auto" ref={scrollRef}>
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                ref={index === messages.length - 1 ? lastMessageRef : null}
-                className={`mb-4 flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[80%] p-3 rounded-lg ${message.role === "user" ? "bg-blue-500 text-white" : "bg-gray-200 text-black"
-                    }`}
-                >
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+            {messages.map((message, index) => {
+              const hasAnalysis =
+                (Array.isArray(message.identifiedSymptoms) && message.identifiedSymptoms.length > 0) ||
+                message.summary ||
+                (Array.isArray(message.possibleConditions) && message.possibleConditions.length > 0) ||
+                message.recommendedAction ||
+                (Array.isArray(message.doctors) && message.doctors.length > 0);
 
-                  {/* ✅ Show AI Analysis Section if exists */}
-                  {/* ✅ Show AI Analysis Section only if aiAnalysis exists */}
-                  {(message.identifiedSymptoms ||
-                    message.summary ||
-                    (message.possibleConditions && message.possibleConditions.length > 0) ||
-                    message.recommendedAction ||
-                    (message.doctors && message.doctors.length > 0)) && (
+              return (
+                <div
+                  key={index}
+                  ref={index === messages.length - 1 ? lastMessageRef : null}
+                  className={`mb-4 flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[80%] p-3 rounded-lg ${message.role === "user" ? "bg-blue-500 text-white" : "bg-gray-200 text-black"
+                      }`}
+                  >
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                    {/* ✅ Feedback Buttons for Bot Messages */}
+                    {message.role === "bot" && (
+                      <div className="flex items-center gap-4 mt-2 text-gray-500 text-sm">
+                        {/* 📋 Copy Button */}
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(message.content);
+                            setCopiedState((prev) => ({ ...prev, [index]: true }));
+                            setTimeout(() => {
+                              setCopiedState((prev) => ({ ...prev, [index]: false }));
+                            }, 800);
+                          }}
+                          className={`transition transform ${copiedState[index] ? "scale-110 text-blue-500" : "hover:text-gray-700 hover:scale-105"}`}
+                          title="Copy"
+                        >
+                          <Copy size={18} />
+                        </button>
+
+                        {/* 👍 Thumbs Up */}
+                        <button
+                          onClick={() =>
+                            setFeedbackState((prev) => ({
+                              ...prev,
+                              [index]: prev[index] === "up" ? null : "up",
+                            }))
+                          }
+                          className={`transition transform hover:scale-110 ${feedbackState[index] === "up" ? "text-green-600 scale-110" : "hover:text-green-500"
+                            }`}
+                          title="Good Response"
+                        >
+                          <ThumbsUp size={18} />
+                        </button>
+
+                        {/* 👎 Thumbs Down */}
+                        <button
+                          onClick={() =>
+                            setFeedbackState((prev) => ({
+                              ...prev,
+                              [index]: prev[index] === "down" ? null : "down",
+                            }))
+                          }
+                          className={`transition transform hover:scale-110 ${feedbackState[index] === "down" ? "text-red-600 scale-110" : "hover:text-red-500"
+                            }`}
+                          title="Poor Response"
+                        >
+                          <ThumbsDown size={18} />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* AI Analysis block */}
+                    {hasAnalysis && !isBotTyping && (
                       <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
@@ -366,10 +400,8 @@ export default function ChatPage() {
                           <div>
                             <p className="text-xs font-medium text-gray-600 mb-1">Identified Symptoms:</p>
                             <div className="flex flex-wrap gap-1">
-                              {message.identifiedSymptoms.map((symptom, index) => (
-                                <Badge key={index} variant="secondary" className="text-xs">
-                                  {symptom}
-                                </Badge>
+                              {message.identifiedSymptoms.map((symptom, idx) => (
+                                <Badge key={idx} variant="secondary" className="text-xs">{symptom}</Badge>
                               ))}
                             </div>
                           </div>
@@ -388,20 +420,14 @@ export default function ChatPage() {
                           <div>
                             <p className="text-xs font-medium text-gray-600 mb-2">Possible Conditions:</p>
                             <div className="space-y-2">
-                              {message.possibleConditions.map((cond, index) => {
-                                const numericProb = parseFloat(cond.probability); // "50%" → 50
+                              {message.possibleConditions.map((cond, idx) => {
+                                const numericProb = parseFloat(cond.probability);
                                 return (
-                                  <div key={index} className="text-sm">
+                                  <div key={idx} className="text-sm">
                                     <div className="flex items-center justify-between">
                                       <span className="font-medium">{cond.name}</span>
                                       <Badge
-                                        variant={
-                                          numericProb > 70
-                                            ? "destructive"
-                                            : numericProb > 40
-                                              ? "default"
-                                              : "secondary"
-                                        }
+                                        variant={numericProb > 70 ? "destructive" : numericProb > 40 ? "default" : "secondary"}
                                         className="text-xs"
                                       >
                                         {cond.probability}
@@ -433,21 +459,12 @@ export default function ChatPage() {
                                   key={doctor._id}
                                   className="flex items-center justify-between p-5 bg-white shadow-lg border border-gray-200 rounded-lg transition-transform hover:scale-[1.02]"
                                 >
-                                  {/* Doctor Details */}
                                   <div>
                                     <p className="text-xl font-semibold text-gray-900">{doctor.name}</p>
-                                    <p className="text-gray-600 text-sm mt-1">
-                                      <strong className="text-gray-800">Specialty:</strong> {doctor.specialty}
-                                    </p>
-                                    <p className="text-gray-600 text-sm mt-1">
-                                      <strong className="text-gray-800">Contact:</strong> {doctor.contact || "N/A"}
-                                    </p>
-                                    <p className="text-gray-600 text-sm mt-1">
-                                      <strong className="text-gray-800">Location:</strong> {doctor.location || "Unknown"}
-                                    </p>
+                                    <p className="text-gray-600 text-sm mt-1"><strong>Specialty:</strong> {doctor.specialty}</p>
+                                    <p className="text-gray-600 text-sm mt-1"><strong>Contact:</strong> {doctor.contact || "N/A"}</p>
+                                    <p className="text-gray-600 text-sm mt-1"><strong>Location:</strong> {doctor.location || "Unknown"}</p>
                                   </div>
-
-                                  {/* Appointment Button */}
                                   <button
                                     className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 transition"
                                     onClick={() => handleAppointment(doctor)}
@@ -462,35 +479,51 @@ export default function ChatPage() {
                         )}
                       </div>
                     )}
-
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </ScrollArea>
 
 
           <Separator />
 
-          {/* Input Field */}
-          <TooltipProvider>
-            <form onSubmit={handleManualSubmit} className="flex w-full space-x-2 p-2 items-center">
-              <Tooltip>
-                <TooltipTrigger>
-                  <Info className="h-5 w-5 text-gray-500 cursor-pointer" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="w-full max-w-lg mx-auto p-2" >
-                    I am a medical chatbot where I will suggest doctors according to your symptoms,
-                    but I won’t be suggesting based on medical conditions.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-              <Input value={input} onChange={handleInputChange} placeholder="Type your message..." disabled={isLoading} />
-              <Button type="submit" size="icon" disabled={isLoading}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </form>
-          </TooltipProvider>
+          <div className="flex flex-col w-full">
+            {isBotTyping && (
+              <div className="mb-2 max-w-[80%] p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+                  <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse delay-150" />
+                  <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse delay-300" />
+                  <span className="text-sm font-medium text-blue-700">AI Analysis</span>
+                </div>
+                <div className="text-sm text-blue-600 font-medium">Analyzing symptoms…</div>
+              </div>
+            )}
+
+
+            <TooltipProvider>
+              <form onSubmit={handleManualSubmit} className="flex w-full space-x-2 p-2 items-center">
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-5 w-5 text-gray-500 cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="w-full max-w-lg mx-auto p-2">
+                      I am a medical chatbot where I will suggest doctors according to your symptoms,
+                      but I won’t be suggesting based on medical conditions.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+                <Input value={input} onChange={handleInputChange} placeholder="Type your message..." disabled={isLoading} />
+                <Button type="submit" size="icon" disabled={isLoading}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </form>
+            </TooltipProvider>
+          </div>
+
+
         </div>
       </div>
     </div>
