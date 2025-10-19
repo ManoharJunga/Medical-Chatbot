@@ -13,22 +13,30 @@ import remarkGfm from "remark-gfm";
 import { Navbar } from "@/components/navbar";
 import { useRouter } from "next/navigation";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-
+import { Badge } from "@/components/ui/badge"
 import { getUserFromLocalStorage } from "./services/userService";
 import { fetchChatWindows, createNewWindow } from "./services/chatWindowService";
 import { fetchChatHistory, sendMessage } from "./services/chatService";
 
+
 interface ChatMessage {
   role: "user" | "bot";
   content: string;
+  identifiedSymptoms?: string[];
+  summary?: string;
+  possibleConditions?: { name: string; probability: string; description: string }[];
+  recommendedAction?: string;
   doctors?: Doctor[];
+  aiRendered?: boolean;
 }
+
 interface Doctor {
+  _id: string;
   name: string;
   specialty: string;
   contact: string;
   location?: string;
-};
+}
 
 interface ChatWindow {
   name: string;
@@ -138,7 +146,7 @@ export default function ChatPage() {
         {
           role: "bot",
           content: "Based on your symptoms, here are some recommended doctors:",
-          doctors: [] // Empty array to prevent errors
+          doctors: []
         }
       ]);
       return;
@@ -149,62 +157,50 @@ export default function ChatPage() {
     setInput("");
     setIsLoading(true);
 
-    console.log("User input:", input); // ✅ Log user input
-
     try {
-      // Send user message to AI chat API
-      console.log("Sending request to AI chat API...");
-      const botMessage = await sendMessage(userId, windowId, input);
-      console.log("Chat API Response:", botMessage); // ✅ Log AI chat response
-      console.log("Window ID:", windowId);
+      const res = await fetch("http://localhost:5001/api/chat/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, windowId, message: input }),
+      });
 
-      setMessages((prev) => [...prev, { role: "bot", content: botMessage }]);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send message");
 
-      // Extract symptoms from bot response
-      const extractedSymptoms = extractSymptoms(botMessage);
-      console.log("Extracted Symptoms:", extractedSymptoms); // ✅ Log extracted symptoms
+      // Bot response
+      setMessages((prev) => [...prev, { role: "bot", content: data.message }]);
 
-      if (extractedSymptoms.length > 0) {
-        console.log("Fetching doctors for symptoms:", extractedSymptoms); // ✅ Log doctor search request
-
-        // Fetch doctor recommendations
-        const doctorResponse = await fetch("http://localhost:5001/api/doctors/find", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ symptoms: extractedSymptoms }),
-        });
-
-        const doctorData = await doctorResponse.json();
-        console.log("Doctor API Response:", doctorData); // ✅ Log doctor API response
-
-        if (!doctorResponse.ok) {
-          throw new Error(doctorData.error || "Failed to fetch doctors");
-        }
-
-        // Ensure doctors array exists in the response
-        if (!doctorData || doctorData.length === 0) {
-          console.warn("No doctors found in API response.");
-        } else {
-          console.log("Doctors fetched successfully:", doctorData);
-        }
-
-        // Display bot message + doctor recommendations
+      // If backend attached analysis → show structured response
+      if (data.analysis) {
+        const { identifiedSymptoms, summary, possibleConditions, recommendedAction, doctors } = data.analysis;
         setMessages((prev) => [
           ...prev,
           {
             role: "bot",
             content: "Based on your symptoms, here are some recommended doctors:",
-            doctors: doctorData // ✅ use array directly
+            identifiedSymptoms,
+            summary,
+            possibleConditions,
+            recommendedAction,
+            doctors
           }
         ]);
       }
+
     } catch (error) {
-      console.error("Error fetching doctors:", error);
-      setMessages((prev) => [...prev, { role: "bot", content: "Sorry, something went wrong. Please try again." }]);
+      console.error("Chat error:", error);
+      setMessages((prev) => [
+        ...prev,
+        { role: "bot", content: "Sorry, something went wrong. Please try again." }
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
+
+
+
+
 
   const handleAppointment = (doctor: { _id: string }) => {
     router.push(`/bookappointment?doctorId=${doctor._id}`);
@@ -337,6 +333,7 @@ export default function ChatPage() {
             </div>
           )}
 
+
           {/* Chat Messages */}
           <ScrollArea className="flex-1 overflow-y-auto" ref={scrollRef}>
             {messages.map((message, index) => (
@@ -351,52 +348,126 @@ export default function ChatPage() {
                 >
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
 
-                  {/* Display doctor recommendations */}
-                  {message.doctors && (
-                    <div className="mt-2 p-2 bg-white border border-gray-300 rounded-lg">
-                      <h3 className="font-semibold text-black mb-1">Recommended Doctors:</h3>
-                      {Array.isArray(message.doctors) && message.doctors.length > 0 ? (
-                        <div className="mt-6 space-y-4">
-                          {message.doctors.map((doctor) => (
-                            <div
-                              key={doctor._id}
-                              className="flex items-center justify-between p-5 bg-white shadow-lg border border-gray-200 rounded-lg transition-transform hover:scale-[1.02]"
-                            >
-                              {/* Doctor Details */}
-                              <div>
-                                <p className="text-xl font-semibold text-gray-900">{doctor.name}</p>
-                                <p className="text-gray-600 text-sm mt-1">
-                                  <strong className="text-gray-800">Specialty:</strong> {doctor.specialty}
-                                </p>
-                                <p className="text-gray-600 text-sm mt-1">
-                                  <strong className="text-gray-800">Contact:</strong> {doctor.contact || "N/A"}
-                                </p>
-                                <p className="text-gray-600 text-sm mt-1">
-                                  <strong className="text-gray-800">Location:</strong> {doctor.location || "Unknown"}
-                                </p>
-                              </div>
-
-                              {/* Appointment Button */}
-                              <button
-                                className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 transition"
-                                onClick={() => handleAppointment(doctor)} // ✅ Pass doctor object here
-                              >
-                                <Calendar size={20} />
-                                <span className="hidden sm:inline">Book Appointment</span>
-                              </button>
-                            </div>
-                          ))}
+                  {/* ✅ Show AI Analysis Section if exists */}
+                  {/* ✅ Show AI Analysis Section only if aiAnalysis exists */}
+                  {(message.identifiedSymptoms ||
+                    message.summary ||
+                    (message.possibleConditions && message.possibleConditions.length > 0) ||
+                    message.recommendedAction ||
+                    (message.doctors && message.doctors.length > 0)) && (
+                      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+                          <span className="text-sm font-medium text-blue-700">AI Analysis</span>
                         </div>
-                      ) : (
-                        <p className="text-gray-500 mt-4 text-center">No doctors found.</p>
-                      )}
 
-                    </div>
-                  )}
+                        {/* Identified Symptoms */}
+                        {Array.isArray(message.identifiedSymptoms) && message.identifiedSymptoms.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-gray-600 mb-1">Identified Symptoms:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {message.identifiedSymptoms.map((symptom, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {symptom}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Summary */}
+                        {message.summary && (
+                          <div>
+                            <h3 className="text-xs font-medium text-gray-600 mb-1">Summary:</h3>
+                            <p className="text-sm text-gray-700">{message.summary}</p>
+                          </div>
+                        )}
+
+                        {/* Possible Conditions */}
+                        {Array.isArray(message.possibleConditions) && message.possibleConditions.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-gray-600 mb-2">Possible Conditions:</p>
+                            <div className="space-y-2">
+                              {message.possibleConditions.map((cond, index) => {
+                                const numericProb = parseFloat(cond.probability); // "50%" → 50
+                                return (
+                                  <div key={index} className="text-sm">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium">{cond.name}</span>
+                                      <Badge
+                                        variant={
+                                          numericProb > 70
+                                            ? "destructive"
+                                            : numericProb > 40
+                                              ? "default"
+                                              : "secondary"
+                                        }
+                                        className="text-xs"
+                                      >
+                                        {cond.probability}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-xs text-gray-600 mt-1">{cond.description}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Recommended Action */}
+                        {message.recommendedAction && (
+                          <div>
+                            <h3 className="font-semibold text-black mb-1">Recommended Action:</h3>
+                            <p className="text-gray-700">{message.recommendedAction}</p>
+                          </div>
+                        )}
+
+                        {/* Recommended Doctors */}
+                        {Array.isArray(message.doctors) && message.doctors.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold text-black mb-1 mt-3">Recommended Doctors:</h3>
+                            <div className="mt-4 space-y-4">
+                              {message.doctors.map((doctor) => (
+                                <div
+                                  key={doctor._id}
+                                  className="flex items-center justify-between p-5 bg-white shadow-lg border border-gray-200 rounded-lg transition-transform hover:scale-[1.02]"
+                                >
+                                  {/* Doctor Details */}
+                                  <div>
+                                    <p className="text-xl font-semibold text-gray-900">{doctor.name}</p>
+                                    <p className="text-gray-600 text-sm mt-1">
+                                      <strong className="text-gray-800">Specialty:</strong> {doctor.specialty}
+                                    </p>
+                                    <p className="text-gray-600 text-sm mt-1">
+                                      <strong className="text-gray-800">Contact:</strong> {doctor.contact || "N/A"}
+                                    </p>
+                                    <p className="text-gray-600 text-sm mt-1">
+                                      <strong className="text-gray-800">Location:</strong> {doctor.location || "Unknown"}
+                                    </p>
+                                  </div>
+
+                                  {/* Appointment Button */}
+                                  <button
+                                    className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 transition"
+                                    onClick={() => handleAppointment(doctor)}
+                                  >
+                                    <Calendar size={20} />
+                                    <span className="hidden sm:inline">Book Appointment</span>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                 </div>
               </div>
             ))}
           </ScrollArea>
+
 
           <Separator />
 
