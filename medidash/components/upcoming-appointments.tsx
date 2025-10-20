@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -6,56 +8,57 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, Video, MapPin } from "lucide-react";
 
-// Define the Appointment Type
+// Appointment type
 interface Appointment {
   _id: string;
-  patient: {
-    name: string;
-  };
+  patient: { name: string };
   type: string;
-  date: string; // Date stored as a string (ISO format)
+  date: string;
   timeSlot: string;
   notes: string;
   status: string;
+  aiAnalysis?: {
+    identifiedSymptoms?: string[];
+    summary?: string;
+    possibleConditions?: { name: string; probability: string; description: string }[];
+    recommendedAction?: string;
+  };
 }
 
 export function UpcomingAppointments({ paramDoctorId }: { paramDoctorId?: string }) {
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch doctorId from local storage or URL param
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const storedDoctor = localStorage.getItem("doctor");
     const doctor = storedDoctor ? JSON.parse(storedDoctor) : null;
-    const finalDoctorId = paramDoctorId || doctor?._id || null;
-
-    setDoctorId(finalDoctorId);
+    setDoctorId(paramDoctorId || doctor?._id || null);
   }, [paramDoctorId]);
 
-  // Fetch Appointments
+  // Fetch appointments
   useEffect(() => {
-    async function fetchAppointments() {
-      if (!doctorId) return;
+    if (!doctorId) return;
 
+    const fetchAppointments = async () => {
       try {
-        const response = await axios.get<{ success: boolean; appointments: Appointment[] }>(
+        const res = await axios.get<{ success: boolean; appointments: Appointment[] }>(
           `http://localhost:5001/api/appointments?doctorId=${doctorId}`
         );
 
-        if (response.data.success && Array.isArray(response.data.appointments)) {
+        if (res.data.success && Array.isArray(res.data.appointments)) {
           const today = new Date();
-          today.setHours(0, 0, 0, 0); // Normalize to start of the day
+          today.setHours(0, 0, 0, 0);
 
-          const validAppointments = response.data.appointments
-            .filter((appointment) => appointment.status !== "pending")
-            .filter((appointment) => {
-              const appointmentDate = new Date(appointment.date);
-              appointmentDate.setHours(0, 0, 0, 0);
-              return appointmentDate >= today; // Only today's and future appointments
+          const validAppointments = res.data.appointments
+            .filter(a => a.status !== "pending")
+            .filter(a => {
+              const aDate = new Date(a.date);
+              aDate.setHours(0, 0, 0, 0);
+              return aDate >= today;
             });
 
           setAppointments(validAppointments);
@@ -63,13 +66,13 @@ export function UpcomingAppointments({ paramDoctorId }: { paramDoctorId?: string
           setAppointments([]);
         }
       } catch (err) {
-        console.error("Error fetching appointments:", err);
+        console.error(err);
         setError("Failed to fetch appointments");
         setAppointments([]);
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     fetchAppointments();
   }, [doctorId]);
@@ -111,6 +114,22 @@ export function UpcomingAppointments({ paramDoctorId }: { paramDoctorId?: string
                   <span>•</span>
                   <span>{appointment.notes}</span>
                 </div>
+
+                {/* AI Symptoms for this appointment */}
+                {/* AI Symptoms for this appointment */}
+                {(appointment.aiAnalysis?.identifiedSymptoms ?? []).length > 0 && (
+                  <div className="mt-3">
+                    <p className="font-semibold text-gray-800 mb-3">Identified Symptoms:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(appointment.aiAnalysis?.identifiedSymptoms ?? []).map((symptom, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-xs">
+                          {symptom}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
               </div>
               <div className="ml-auto flex gap-2">
                 <Button variant="outline" size="sm">

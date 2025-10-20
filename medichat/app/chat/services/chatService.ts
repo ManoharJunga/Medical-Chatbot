@@ -30,7 +30,6 @@ export type ChatMessage = {
 export const fetchChatHistory = async (windowId: string, lastTimestamp?: string): Promise<ChatMessage[]> => {
   try {
     const response = await axios.get<ChatApiResponse>(`http://localhost:5001/api/chat/history/${windowId}`);
-    console.log("Fetched chat history:", response.data);
 
     // Filter messages newer than lastTimestamp
     const newMessages = lastTimestamp

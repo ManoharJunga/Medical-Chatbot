@@ -29,6 +29,12 @@ interface ChatMessage {
   recommendedAction?: string;
   doctors?: Doctor[];
   aiRendered?: boolean;
+  analysis?: {
+    summary?: string;
+    identifiedSymptoms?: string[];
+    possibleConditions?: { name: string; probability: string; description: string }[];
+    recommendedAction?: string;
+  };
 }
 
 interface Doctor {
@@ -202,15 +208,30 @@ export default function ChatPage() {
     }
   };
 
+const handleAppointment = (doctor: Doctor, botMessage: ChatMessage) => {
+  console.log("📌 Full botMessage object:", botMessage); // Log entire object
+  console.log("aiRendered:", botMessage.aiRendered);
+  console.log("summary:", botMessage.summary);
+  console.log("identifiedSymptoms:", botMessage.identifiedSymptoms);
+  console.log("possibleConditions:", botMessage.possibleConditions);
+  console.log("recommendedAction:", botMessage.recommendedAction);
 
-
-
-
-  const handleAppointment = (doctor: { _id: string }) => {
-    router.push(`/bookappointment?doctorId=${doctor._id}`);
+  // Extract AI analysis data safely
+  const analysisData = {
+    summary: botMessage.summary || "",
+    identifiedSymptoms: botMessage.identifiedSymptoms || [],
+    possibleConditions: botMessage.possibleConditions || [],
+    recommendedAction: botMessage.recommendedAction || "",
+    doctors: botMessage.doctors || [],
+    aiRendered: botMessage.aiRendered || false,
   };
 
+  console.log("Storing AI Analysis in sessionStorage:", analysisData);
+  sessionStorage.setItem("aiAnalysis", JSON.stringify(analysisData));
 
+  console.log("Navigating to Book Appointment page for doctor:", doctor._id);
+  router.push(`/bookappointment?doctorId=${doctor._id}`);
+};
 
   const quickActions = [
     { label: "Check Symptoms", prompt: "I want to check my symptoms" },
@@ -467,7 +488,7 @@ export default function ChatPage() {
                                   </div>
                                   <button
                                     className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 transition"
-                                    onClick={() => handleAppointment(doctor)}
+                                    onClick={() => handleAppointment(doctor, message)} // pass full bot message
                                   >
                                     <Calendar size={20} />
                                     <span className="hidden sm:inline">Book Appointment</span>
@@ -477,6 +498,7 @@ export default function ChatPage() {
                             </div>
                           </div>
                         )}
+
                       </div>
                     )}
                   </div>

@@ -6,10 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Video, MapPin, Clock, User, CalendarPlus, X, CheckCircle } from "lucide-react";
 
-// Define types for props and appointment structure
+// Define types
 interface Patient {
   name?: string;
   avatar?: string;
+}
+
+interface AIAnalysis {
+  identifiedSymptoms?: string[];
+  summary?: string;
 }
 
 interface Appointment {
@@ -20,6 +25,7 @@ interface Appointment {
   date: string;
   timeSlot: string;
   patientAvatar?: string;
+  aiAnalysis?: AIAnalysis;
 }
 
 interface AppointmentsListProps {
@@ -46,22 +52,19 @@ export function AppointmentsList({ paramDoctorId }: AppointmentsListProps) {
     const fetchAppointments = async () => {
       setLoading(true);
       try {
-        console.log("Fetching appointments for doctorId:", doctorId);  // Log doctorId
-        const { data } = await axios.get<{ success: boolean, appointments: Appointment[], message?: string }>(
+        const { data } = await axios.get<{ success: boolean; appointments: Appointment[]; message?: string }>(
           `http://localhost:5001/api/appointments/doctor/${doctorId}/pending`
         );
-        
-        console.log("Response data:", data);  // Log response data
 
         if (data.success && data.appointments.length > 0) {
           setAppointments(data.appointments);
-          setError(""); // Clear previous error message
+          setError("");
         } else {
           setAppointments([]);
           setError(data.message || "No pending appointments for this doctor.");
         }
       } catch (err) {
-        console.error("Error fetching appointments:", err);  // Log error details
+        console.error("Error fetching appointments:", err);
         setError("Failed to fetch appointments.");
       } finally {
         setLoading(false);
@@ -70,7 +73,6 @@ export function AppointmentsList({ paramDoctorId }: AppointmentsListProps) {
 
     fetchAppointments();
   }, [doctorId]);
-
 
   const approveAppointment = async (appointmentId: string) => {
     try {
@@ -90,68 +92,78 @@ export function AppointmentsList({ paramDoctorId }: AppointmentsListProps) {
 
   return (
     <div className="space-y-4">
-      {appointments.length === 0 ? (
-        <p className="text-center text-gray-500">No appointments to display.</p>
-      ) : (
-        appointments.map(({ _id, patient, isUrgent, type, date, timeSlot, patientAvatar }) => (
-          <Card key={_id} className={isUrgent ? "border-amber-200" : ""}>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={patientAvatar || patient?.avatar} alt={patient?.name || "Unknown"} />
-                  <AvatarFallback>{patient?.name?.[0] || "?"}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">{patient?.name || "Unknown"}</h3>
-                    {isUrgent && (
-                      <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
-                        Urgent
-                      </Badge>
-                    )}
-                    <Badge variant={type === "Video Call" ? "default" : "outline"}>
-                      {type === "Video Call" ? (
-                        <>
-                          <Video className="mr-1 h-3 w-3" /> Online
-                        </>
-                      ) : (
-                        <>
-                          <MapPin className="mr-1 h-3 w-3" /> In-Person
-                        </>
-                      )}
+      {appointments.map(({ _id, patient, isUrgent, type, date, timeSlot, patientAvatar, aiAnalysis }) => (
+        <Card key={_id} className={isUrgent ? "border-amber-200" : ""}>
+          <CardContent className="p-6">
+            {/* Top Row: Avatar + Patient Info */}
+            <div className="flex items-center gap-4">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={patientAvatar || patient?.avatar} alt={patient?.name || "Unknown"} />
+                <AvatarFallback>{patient?.name?.[0] || "?"}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold">{patient?.name || "Unknown"}</h3>
+                  {isUrgent && (
+                    <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
+                      Urgent
                     </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    <span>Requested: {new Date(date).toLocaleDateString("en-GB")}</span>
-                    <span>•</span>
-                    <span className="font-medium">Time Slot: {timeSlot}</span>
-                  </div>
+                  )}
+                  <Badge variant={type === "Video Call" ? "default" : "outline"}>
+                    {type === "Video Call" ? (
+                      <>
+                        <Video className="mr-1 h-3 w-3" /> Online
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="mr-1 h-3 w-3" /> In-Person
+                      </>
+                    )}
+                  </Badge>
                 </div>
-                <div className="ml-auto flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <User className="mr-2 h-4 w-4" />
-                    View Profile
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <CalendarPlus className="mr-2 h-4 w-4" />
-                    Reschedule
-                  </Button>
-                  <Button size="sm" variant="destructive">
-                    <X className="mr-2 h-4 w-4" />
-                    Decline
-                  </Button>
-                  <Button size="sm" onClick={() => approveAppointment(_id)}>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Approve
-                  </Button>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                  <Clock className="h-3 w-3" />
+                  <span>Requested: {new Date(date).toLocaleDateString("en-GB")}</span>
+                  <span>•</span>
+                  <span className="font-medium">Time Slot: {timeSlot}</span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))
-      )}
-    </div>
+              <div className="ml-auto flex gap-2">
+                <Button variant="outline" size="sm">
+                  <User className="mr-2 h-4 w-4" />
+                  View Profile
+                </Button>
+                <Button variant="outline" size="sm">
+                  <CalendarPlus className="mr-2 h-4 w-4" />
+                  Reschedule
+                </Button>
+                <Button size="sm" variant="destructive">
+                  <X className="mr-2 h-4 w-4" />
+                  Decline
+                </Button>
+                <Button size="sm" onClick={() => approveAppointment(_id)}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Approve
+                </Button>
+              </div>
+            </div>
 
+            {/* AI Symptoms */}
+            {aiAnalysis?.identifiedSymptoms?.length ? (
+              <div className="mt-4 border-t pt-3">
+                <p className="font-semibold text-gray-800 mb-1">Identified Symptoms:</p>
+                <div className="flex flex-wrap gap-2">
+                  {aiAnalysis.identifiedSymptoms.map((symptom, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-xs">
+                      {symptom}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }

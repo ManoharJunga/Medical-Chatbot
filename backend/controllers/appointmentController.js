@@ -4,22 +4,42 @@ const DoctorSchedule = require("../models/doctorSchedule.model");
 // Create a new appointment
 exports.createAppointment = async (req, res) => {
   try {
-    const { doctor, patient, date, timeSlot, status, notes } = req.body;
+    const { doctor, patient, date, timeSlot, status, notes, aiAnalysis } = req.body;
 
     // Check if the slot is already booked
     const existingAppointment = await Appointment.findOne({ doctor, date, timeSlot });
-
     if (existingAppointment) {
-      return res.status(400).json({ success: false, message: "Time slot already booked. Please select another slot." });
+      return res.status(400).json({
+        success: false,
+        message: "Time slot already booked. Please select another slot.",
+      });
     }
 
-    // Create the appointment
-    const appointment = new Appointment({ doctor, patient, date, timeSlot, status, notes });
+    // Create the appointment with aiAnalysis included
+    const appointment = new Appointment({
+      doctor,
+      patient,
+      date,
+      timeSlot,
+      status,
+      notes,
+      aiAnalysis, // ✅ stored separately in structured format
+    });
+
     await appointment.save();
 
-    res.status(201).json({ success: true, message: "Appointment created successfully", appointment });
+    res.status(201).json({
+      success: true,
+      message: "Appointment created successfully",
+      appointment,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error creating appointment", error: error.message });
+    console.error("Error creating appointment:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error creating appointment",
+      error: error.message,
+    });
   }
 };
 
@@ -166,16 +186,11 @@ exports.getAppointmentsByUser = async (req, res) => {
 
 exports.getAvailableSlots = async (req, res) => {
   try {
-    const { doctorId, date } = req.query; 
-
+    const { doctorId, date } = req.query;
     if (!doctorId || !date) {
-      console.log("Missing required parameters: doctorId or date");
       return res.status(400).json({ success: false, message: "Doctor ID and date are required" });
     }
 
-    console.log("Fetching available slots for Doctor ID:", doctorId, "on Date:", date);
-
-    // Define all possible slots (if no dynamic schedule is available)
     const allSlots = [
       "09:00 AM - 10:00 AM",
       "10:00 AM - 11:00 AM",
@@ -186,48 +201,35 @@ exports.getAvailableSlots = async (req, res) => {
       "04:00 PM - 05:00 PM"
     ];
 
-    // Fetch doctor's schedule if available
     const schedule = await DoctorSchedule.findOne({ doctor: doctorId });
-    console.log("Doctor's schedule found:", schedule ? schedule.availableSlots : "No schedule found");
-
-    // If schedule exists, use those slots; otherwise, use default allSlots
     const availableSlots = schedule ? schedule.availableSlots : allSlots;
 
-    // Fetch booked appointments for the selected date
     const bookedAppointments = await Appointment.find({ doctor: doctorId, date })
-      .populate("patient", "name phone") // Fetch patient details
-      .select("timeSlot patient notes"); // Select only required fields
+      .populate("patient", "name phone")
+      .select("timeSlot patient notes aiAnalysis");
 
-    console.log("Booked appointments found:", bookedAppointments);
-
-    // Extract booked slots and their details
     const bookedSlots = bookedAppointments.map(app => ({
       timeSlot: app.timeSlot,
       patient: app.patient,
       notes: app.notes,
+      aiAnalysis: app.aiAnalysis, // ✅ structured AI analysis
     }));
 
-    console.log("Booked Slots Extracted:", bookedSlots);
-
-    // Determine final available slots
     const finalAvailableSlots = availableSlots.filter(
       slot => !bookedSlots.some(booked => booked.timeSlot === slot)
     );
 
-    console.log("Final Available Slots:", finalAvailableSlots);
-
-    res.status(200).json({ 
-      success: true, 
-      availableSlots: finalAvailableSlots, 
-      bookedAppointments 
+    res.status(200).json({
+      success: true,
+      availableSlots: finalAvailableSlots,
+      bookedAppointments: bookedSlots,
     });
-
   } catch (error) {
     console.error("Error fetching available slots:", error.message);
-    res.status(500).json({ 
-      success: false, 
-      message: "Error fetching available slots", 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: "Error fetching available slots",
+      error: error.message,
     });
   }
 };
