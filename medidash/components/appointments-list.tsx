@@ -4,10 +4,29 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Video, MapPin, Clock, User, CalendarPlus, X, CheckCircle } from "lucide-react";
+import {
+  Video,
+  MapPin,
+  Clock,
+  User,
+  CalendarPlus,
+  X,
+  CheckCircle,
+  Mail,
+  Phone,
+  Calendar,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
-// Define types
+// Interfaces
 interface Patient {
+  _id?: string;
   name?: string;
   avatar?: string;
 }
@@ -28,40 +47,95 @@ interface Appointment {
   aiAnalysis?: AIAnalysis;
 }
 
-interface AppointmentsListProps {
-  paramDoctorId?: string;
+interface UserProfile {
+  name: string;
+  email: string;
+  phone: string;
+  dob: string;
+  gender: string;
+  isVerified: boolean;
+  isApproved: boolean;
+  createdAt: string;
 }
 
-export function AppointmentsList({ paramDoctorId }: AppointmentsListProps) {
+interface AppointmentsListProps {
+  paramDoctorId?: string;
+  onRequestCountChange?: (count: number) => void;
+}
+
+
+
+export function AppointmentsList({ paramDoctorId, onRequestCountChange }: AppointmentsListProps) {
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
+  // Load doctorId
+  useEffect(() => {
     const storedDoctor = localStorage.getItem("doctor");
     const doctor = storedDoctor ? JSON.parse(storedDoctor) : null;
     setDoctorId(paramDoctorId || doctor?._id || null);
   }, [paramDoctorId]);
 
   useEffect(() => {
-    if (!doctorId) return;
+  if (!doctorId) {
+    console.log("⛔ No doctorId provided");
+    return;
+  }
 
+  const fetchAppointments = async () => {
+    console.log("🔄 Fetching appointments for doctorId:", doctorId);
+
+    setLoading(true);
+    try {
+      const response = await axios.get(
+        `http://localhost:5001/api/appointments/doctor/${doctorId}/pending`
+      );
+
+      console.log("✅ API Response:", response.data); // 🔍 check what the backend sends
+
+      if (response.data.success) {
+        const appointments = response.data.appointments || [];
+        console.log("📦 Appointments count:", appointments.length);
+        setAppointments(appointments);
+        onRequestCountChange?.(appointments.length);
+      } else {
+        console.log("⚠️ Backend returned success=false");
+        setAppointments([]);
+        onRequestCountChange?.(0);
+      }
+    } catch (err) {
+      console.error("❌ Error fetching appointments:", err);
+      setError("Failed to fetch appointments.");
+      onRequestCountChange?.(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchAppointments();
+}, [doctorId, onRequestCountChange]);
+
+
+  // Fetch appointments
+  useEffect(() => {
+    if (!doctorId) return;
     const fetchAppointments = async () => {
       setLoading(true);
       try {
         const { data } = await axios.get<{ success: boolean; appointments: Appointment[]; message?: string }>(
           `http://localhost:5001/api/appointments/doctor/${doctorId}/pending`
         );
-
-        if (data.success && data.appointments.length > 0) {
+        if (data.success) {
           setAppointments(data.appointments);
           setError("");
         } else {
           setAppointments([]);
-          setError(data.message || "No pending appointments for this doctor.");
+          setError(data.message || "No pending appointments.");
         }
       } catch (err) {
         console.error("Error fetching appointments:", err);
@@ -70,21 +144,33 @@ export function AppointmentsList({ paramDoctorId }: AppointmentsListProps) {
         setLoading(false);
       }
     };
-
     fetchAppointments();
   }, [doctorId]);
 
+  // Approve appointment
   const approveAppointment = async (appointmentId: string) => {
     try {
       const { data } = await axios.put(`http://localhost:5001/api/appointments/${appointmentId}/status`, {
         status: "confirmed",
       });
-      setAppointments((prev) => prev.filter((appointment) => appointment._id !== appointmentId));
-      console.log("Appointment approved successfully:", data);
+      setAppointments((prev) => prev.filter((a) => a._id !== appointmentId));
+      console.log("Appointment approved:", data);
     } catch (error) {
       console.error("Error approving appointment:", error);
     }
   };
+
+  const handleViewProfile = async (userId?: string) => {
+  if (!userId) return;
+  try {
+    const { data } = await axios.get<UserProfile>(`http://localhost:5001/api/users/${userId}`);
+    setSelectedUser(data); // directly use data, since your API returns the user object itself
+    setIsDialogOpen(true);
+  } catch (err) {
+    console.error("Error fetching user:", err);
+  }
+};
+
 
   if (loading) return <p>Loading appointments...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
@@ -95,12 +181,12 @@ export function AppointmentsList({ paramDoctorId }: AppointmentsListProps) {
       {appointments.map(({ _id, patient, isUrgent, type, date, timeSlot, patientAvatar, aiAnalysis }) => (
         <Card key={_id} className={isUrgent ? "border-amber-200" : ""}>
           <CardContent className="p-6">
-            {/* Top Row: Avatar + Patient Info */}
             <div className="flex items-center gap-4">
               <Avatar className="h-12 w-12">
                 <AvatarImage src={patientAvatar || patient?.avatar} alt={patient?.name || "Unknown"} />
                 <AvatarFallback>{patient?.name?.[0] || "?"}</AvatarFallback>
               </Avatar>
+
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold">{patient?.name || "Unknown"}</h3>
@@ -123,13 +209,14 @@ export function AppointmentsList({ paramDoctorId }: AppointmentsListProps) {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                   <Clock className="h-3 w-3" />
-                  <span>Requested: {new Date(date).toLocaleDateString("en-GB")}</span>
+                  <span>{new Date(date).toLocaleDateString("en-GB")}</span>
                   <span>•</span>
-                  <span className="font-medium">Time Slot: {timeSlot}</span>
+                  <span className="font-medium">Time: {timeSlot}</span>
                 </div>
               </div>
+
               <div className="ml-auto flex gap-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => handleViewProfile(patient?._id)}>
                   <User className="mr-2 h-4 w-4" />
                   View Profile
                 </Button>
@@ -148,7 +235,6 @@ export function AppointmentsList({ paramDoctorId }: AppointmentsListProps) {
               </div>
             </div>
 
-            {/* AI Symptoms */}
             {aiAnalysis?.identifiedSymptoms?.length ? (
               <div className="mt-4 border-t pt-3">
                 <p className="font-semibold text-gray-800 mb-1">Identified Symptoms:</p>
@@ -164,6 +250,31 @@ export function AppointmentsList({ paramDoctorId }: AppointmentsListProps) {
           </CardContent>
         </Card>
       ))}
+
+      {/* Profile Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Patient Profile</DialogTitle>
+            <DialogDescription>Complete details of the patient</DialogDescription>
+          </DialogHeader>
+
+          {selectedUser ? (
+            <div className="space-y-2 mt-3">
+              <p><strong>Name:</strong> {selectedUser.name}</p>
+              <p className="flex items-center gap-2"><Mail className="h-4 w-4" /> {selectedUser.email}</p>
+              <p className="flex items-center gap-2"><Phone className="h-4 w-4" /> {selectedUser.phone}</p>
+              <p className="flex items-center gap-2"><Calendar className="h-4 w-4" /> DOB: {new Date(selectedUser.dob).toLocaleDateString("en-GB")}</p>
+              <p><strong>Gender:</strong> {selectedUser.gender}</p>
+              <p><strong>Verified:</strong> {selectedUser.isVerified ? "Yes" : "No"}</p>
+              <p><strong>Approved:</strong> {selectedUser.isApproved ? "Yes" : "No"}</p>
+              <p><strong>Joined On:</strong> {new Date(selectedUser.createdAt).toLocaleDateString("en-GB")}</p>
+            </div>
+          ) : (
+            <p>Loading profile...</p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -52,6 +52,34 @@ exports.getAllAppointments = async (req, res) => {
     res.status(500).json({ success: false, message: "Error fetching appointments", error: error.message });
   }
 };
+exports.createManualAppointment = async (req, res) => {
+  try {
+    console.log("🟢 Incoming manual appointment data:", req.body);
+
+    const { doctor, patientName, patientPhone, date, timeSlot, notes } = req.body;
+
+    const newAppointment = new Appointment({
+      doctor,
+      patientName,
+      patientPhone,
+      date,
+      timeSlot,
+      notes,
+      isManual: true, // Optional: mark it as manually created
+    });
+
+    await newAppointment.save();
+    res.status(201).json({ success: true, appointment: newAppointment });
+  } catch (error) {
+    console.error("❌ Error creating manual appointment:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error creating manual appointment",
+      error: error.message,
+    });
+  }
+};
+
 
 // Get an appointment by ID
 exports.getAppointmentById = async (req, res) => {

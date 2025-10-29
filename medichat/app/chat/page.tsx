@@ -209,12 +209,6 @@ export default function ChatPage() {
   };
 
 const handleAppointment = (doctor: Doctor, botMessage: ChatMessage) => {
-  console.log("📌 Full botMessage object:", botMessage); // Log entire object
-  console.log("aiRendered:", botMessage.aiRendered);
-  console.log("summary:", botMessage.summary);
-  console.log("identifiedSymptoms:", botMessage.identifiedSymptoms);
-  console.log("possibleConditions:", botMessage.possibleConditions);
-  console.log("recommendedAction:", botMessage.recommendedAction);
 
   // Extract AI analysis data safely
   const analysisData = {
