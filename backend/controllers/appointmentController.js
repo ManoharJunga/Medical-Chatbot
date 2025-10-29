@@ -1,37 +1,40 @@
 const Appointment = require("../models/appointment.model");
 const DoctorSchedule = require("../models/doctorSchedule.model");
+const Notification = require("../models/Notification");
 
 // Create a new appointment
 exports.createAppointment = async (req, res) => {
   try {
     const { doctor, patient, date, timeSlot, status, notes, aiAnalysis } = req.body;
 
-    // Check if the slot is already booked
-    const existingAppointment = await Appointment.findOne({ doctor, date, timeSlot });
-    if (existingAppointment) {
-      return res.status(400).json({
-        success: false,
-        message: "Time slot already booked. Please select another slot.",
-      });
-    }
-
-    // Create the appointment with aiAnalysis included
-    const appointment = new Appointment({
+    // ✅ Create the appointment
+    const newAppointment = new Appointment({
       doctor,
       patient,
       date,
       timeSlot,
       status,
       notes,
-      aiAnalysis, // ✅ stored separately in structured format
+      aiAnalysis,
     });
 
-    await appointment.save();
+    const savedAppointment = await newAppointment.save();
+
+    // ✅ Automatically create a notification for the doctor
+    const notification = new Notification({
+      user: doctor, // notification belongs to the doctor
+      title: "New Appointment Request",
+      message: `A new appointment has been booked by patient ID ${patient} for ${date} at ${timeSlot}.`,
+      type: "appointment",
+      priority: "normal",
+    });
+
+    await notification.save();
 
     res.status(201).json({
       success: true,
-      message: "Appointment created successfully",
-      appointment,
+      message: "Appointment booked successfully and notification created.",
+      data: savedAppointment,
     });
   } catch (error) {
     console.error("Error creating appointment:", error);

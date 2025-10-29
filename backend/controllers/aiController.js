@@ -64,9 +64,7 @@ exports.analyzeSymptoms = async (req, res) => {
 
     const prompt = `
 The user said: "${message}"
-
 You are a medical assistant. Analyze the text and return the output strictly in this JSON format:
-
 {
   "symptoms": ["symptom1", "symptom2"],
   "possibleConditions": [
@@ -77,7 +75,6 @@ You are a medical assistant. Analyze the text and return the output strictly in 
   "recommendedAction": "One short line of advice"
 }
 `;
-
     const text = await callGemini(prompt);
 
     let parsed;
